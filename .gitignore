@@ -1,0 +1,32 @@
+# Dependencias
+node_modules/
+**/node_modules/
+
+# Builds y caché
+web/dist/
+web/.angular/
+backend/dist/
+mobile/android/build/
+mobile/ios/build/
+
+# React Native específico
+mobile/android/.gradle/
+mobile/android/app/build/
+mobile/ios/Pods/
+
+# Variables de entorno reales (solo .env.example se sube)
+.env
+**/.env
+
+# Logs
+*.log
+npm-debug.log*
+
+# Sistema operativo / editor
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+
+# Test coverage
+coverage/
