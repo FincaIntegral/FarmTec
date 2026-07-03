@@ -30,3 +30,23 @@ Thumbs.db
 
 # Test coverage
 coverage/
+
+
+node_modules/
+dist/
+backend/dist/
+
+.env
+.env.*
+
+!.env.example
+
+coverage/
+
+*.log
+
+.vscode/
+
+.idea/
+
+.DS_Store
