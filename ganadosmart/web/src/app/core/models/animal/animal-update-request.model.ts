@@ -1,17 +1,13 @@
-﻿import { CategoriaAnimal, EstadoAnimal, SexoAnimal } from '../domain-types';
+import { CategoriaAnimal, SexoAnimal } from '../domain-types';
 
+// PATCH /animales/{id} recibe el mismo shape que CrearAnimalDto (reemplazo
+// completo, no parcial) — el backend no soporta actualización parcial.
 export interface AnimalUpdateRequestModel {
-  id: string;
-  fincaId?: string;
-  madreId?: string;
-  padreId?: string;
-  identificador?: string;
-  categoria?: CategoriaAnimal;
-  sexo?: SexoAnimal;
+  codigo: string;
+  categoria: CategoriaAnimal;
+  sexo: SexoAnimal;
   fechaNacimiento?: string;
   raza?: string;
-  valorComercialEstimado?: number;
-  valorComercialAjustado?: number;
-  fotoUrl?: string;
-  estado?: EstadoAnimal;
+  madreId?: string;
+  padreId?: string;
 }

@@ -1,23 +1,18 @@
 import { HttpHeaders, HttpParams } from '@angular/common/http';
+import { Injectable } from '@angular/core';
+import { apiConfig } from '../config/api.config';
 import { buildHeaders, buildParams } from './http-options';
 
-export interface RequestContext<T = unknown> {
-  readonly url: string;
-  readonly pathParams?: Readonly<Record<string, string>>;
-  readonly queryParams?: Readonly<Record<string, unknown>>;
-  readonly headers?: Readonly<Record<string, string | undefined>>;
-  readonly body?: T;
-  readonly isMultipart?: boolean;
-}
-
+@Injectable({ providedIn: 'root' })
 export class RequestBuilder {
-  private resolveEndpointUrl(
+  resolveUrl(
     endpoint: string | ((...args: string[]) => string),
     pathParams?: Readonly<Record<string, string>>
   ): string {
     if (typeof endpoint === 'function') {
       const args = pathParams ? Object.values(pathParams) : [];
-      return endpoint(args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9]);
+      const path = endpoint(args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9]);
+      return `${apiConfig.baseUrl}${path}`;
     }
     let url = endpoint;
     if (pathParams) {
@@ -25,7 +20,7 @@ export class RequestBuilder {
         url = url.replace(`:${key}`, value).replace(`{${key}}`, value);
       }
     }
-    return url;
+    return `${apiConfig.baseUrl}${url}`;
   }
 
   buildQueryParams(queryParams?: Readonly<Record<string, unknown>>): HttpParams {
@@ -50,20 +45,4 @@ export class RequestBuilder {
     }
     return body as T;
   }
-
-  build<T>(context: RequestContext<T>): {
-    readonly url: string;
-    readonly params: HttpParams;
-    readonly headers: HttpHeaders;
-    readonly body: T | FormData;
-  } {
-    return {
-      url: this.resolveEndpointUrl(context.url, context.pathParams),
-      params: this.buildQueryParams(context.queryParams),
-      headers: this.buildHeaders(context.headers),
-      body: this.buildBody(context.body, context.isMultipart),
-    };
-  }
 }
-
-export const requestBuilder = new RequestBuilder();

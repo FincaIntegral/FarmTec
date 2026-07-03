@@ -1,5 +1,5 @@
-import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
 import { Observable, timeout, retry } from 'rxjs';
 import { buildHeaders, buildParams, HttpRequestOptions } from './http-options';
 import { RequestBuilder } from './request-builder';
@@ -9,7 +9,6 @@ export interface ApiClientRequestOptions extends HttpRequestOptions {
   readonly isMultipart?: boolean;
   readonly timeoutMs?: number;
   readonly retryCount?: number;
-  readonly signal?: AbortSignal;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -56,16 +55,17 @@ export class ApiClientService {
   ): Observable<T> {
     const { url, headers, params, body: finalBody } = this.prepare(endpoint, pathParams, body, options);
 
-    let request$ = this.http.request<T>(method, url, {
+    // HttpClient.request() resuelve su overload por el literal de responseType,
+    // pero acá es dinámico (json/blob/text/arraybuffer) — se castea a propósito.
+    let request$ = this.http.request(method, url, {
       body: finalBody,
       headers,
       params,
       observe: options.observe ?? 'body',
-      responseType: options.responseType ?? 'json',
+      responseType: (options.responseType ?? 'json') as 'json',
       reportProgress: options.reportProgress ?? false,
       withCredentials: options.withCredentials ?? false,
-      signal: options.signal,
-    });
+    }) as Observable<T>;
 
     if (options.timeoutMs) {
       request$ = request$.pipe(timeout(options.timeoutMs));

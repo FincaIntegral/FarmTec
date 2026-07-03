@@ -1,0 +1,9 @@
+<div class="flex items-center justify-between mb-4">
+  <div>
+    <h2 class="text-xs font-black text-muted-foreground uppercase tracking-widest font-heading">{{ title() }}</h2>
+    @if (sub()) {
+      <p class="text-[10px] text-muted-foreground mt-0.5">{{ sub() }}</p>
+    }
+  </div>
+  <ng-content select="[action]" />
+</div>

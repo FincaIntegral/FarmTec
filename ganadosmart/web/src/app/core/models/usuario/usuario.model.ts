@@ -5,7 +5,6 @@ export interface UsuarioModel {
   fincaId: string;
   nombre: string;
   correo: string;
-  contrasenaHash: string;
   rol: RolUsuario;
   activo: boolean;
   ultimoAcceso?: string;
