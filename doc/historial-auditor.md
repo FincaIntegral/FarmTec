@@ -1,0 +1,47 @@
+# Historial de Auditorías — GanadoSmart Backend
+## Modo cavernicola: fecha | módulo | estado | problema | decisión
+
+> Una línea por entrada. Sin explicaciones largas.
+> Claude Code actualiza este archivo al terminar cada módulo.
+> Diego y Juan lo leen antes de empezar cualquier sesión nueva.
+
+---
+
+## FORMATO
+```
+YYYY-MM-DD | MODULO | ESTADO | PROBLEMA ENCONTRADO | DECISIÓN TOMADA
+```
+
+Estados posibles: INICIADO · EN_CURSO · COMPLETO · BLOQUEADO · PARCIAL
+
+---
+
+## REGISTRO
+
+| Fecha | Módulo | Estado | Problema | Decisión |
+|---|---|---|---|---|
+| 2026-07-03 | general (auditoría previa a implementar) | BLOQUEADO | backend/src/modules tiene 65 archivos .ts (usuario, animal, reproduccion, potrero, venta, gasto, reporte, alerta, notificacion) pero todos están en 0 bytes — es solo el scaffold de setup-estructura.sh, ningún módulo tiene código real. web/ (Angular) sí tiene modelos e infraestructura de API reales para todas las entidades. mobile/ y shared-contracts/ están vacíos igual que backend. Además, /configuracion/aprobacion y /sincronizacion/* del contrato no tienen ni carpeta de módulo creada en backend. | Se eligió empezar por usuario (auth+guards), dependencia dura de todos los demás módulos |
+| 2026-07-03 | usuario | COMPLETO | 1) package.json del backend solo tenía el starter de Nest — se instalaron TypeORM+pg, @nestjs/jwt+passport-jwt, bcrypt, class-validator/transformer, @nestjs/config, @types/pg, dotenv. 2) app.module.ts importaba ./app.controller y ./app.service que nunca existieron (bug del scaffold) — se quitaron. 3) correo es UNIQUE(finca_id, correo) en schema.sql, no globalmente único, pero /auth/login del contrato no recibe fincaId — login busca por correo cross-finca; con 1 sola finca en el piloto no colisiona, pero es limitación conocida si se agregan fincas con usuarios de correo repetido. 4) GET /usuarios y finca-tenant.guard no tenían rol/propósito definido en contrato ni CLAUDE.md — se decidió con Diego/Juan: GET /usuarios solo dueno_finca; FincaTenantGuard verifica usuario.activo=true en BD en cada request. 5) Guards registrados como APP_GUARD globales (con @Public() como escape hatch) en vez de @UseGuards() por endpoint. 6) HttpExceptionFilter tenía 2 bugs propios encontrados en las pruebas: devolvía error:"BAD_REQUEST" (SCREAMING_CASE) en vez de "Bad Request", y devolvía error:"Internal Server Error" hardcodeado para excepciones sin mensaje custom (ej. UnauthorizedException() vacía) sin importar el statusCode real — ambos corregidos usando http.STATUS_CODES de Node. 7) La BD real es Supabase (las 13 tablas de schema.sql ya existen ahí, confirmado por query a information_schema) — NO se necesitó migración de TypeORM. DATABASE_URL va en backend/.env (gitignored), no en la raíz — corregido porque backend/ es el cwd real al correr npm run start. | Probado end-to-end contra Supabase real: POST /auth/login, GET /usuarios (200 con dueno_finca, 403 con administrador_finca — RolesGuard funcionando), POST /usuarios (201, y 400 por correo duplicado), sin token (401), token inválido (401). Seed script en backend/src/scripts/seed.ts (npx ts-node -r tsconfig-paths/register src/scripts/seed.ts) crea finca+usuario de prueba idempotente. test/app.e2e-spec.ts sigue desactualizado (testeaba GET / que ya no existe) — pendiente. docker-compose.yml quedó armado como fallback local pero no se usó (se probó directo contra Supabase). |
+| 2026-07-03 | animal | COMPLETO | 1) AnimalResponse necesita potreroActualId (movimiento_ganado, PotreroModule) y enGestacion/conteoReproduccion (reproduccion, ReproduccionModule) — ninguno existe todavía. Decisión: AnimalRepository NO hace queries cross-módulo; se devuelven placeholders documentados con TODO (potreroActualId=null, enGestacion=false, conteoReproduccion={0,0}) hasta que esos módulos existan y AnimalModule los importe. 2) El filtro "buscar" del contrato dice "codigo, raza o nombre parcial" pero animal no tiene columna nombre en schema.sql — se implementó ILIKE sobre codigo y raza únicamente. 3) El filtro potreroId de GET /animales se acepta en el DTO de query (para no romper el contrato) pero no se aplica — misma razón del punto 1. 4) Roles de /peso, /mortalidad, /foto no estaban en el contrato salvo /peso — se igualaron los 3 a dueno_finca+administrador_finca+veterinario. 5) docker-compose.yml solo tenía el servicio Postgres vacío de esquema — se agregó mount de doc/schema(1).sql como script de init (docker-entrypoint-initdb.d) para que levante con las 13 tablas ya creadas; no se pudo probar en vivo porque Docker Desktop no corría en este entorno, pero `docker compose config` valida sintaxis y rutas. 6) Se agregó numericTransformer compartido (shared/utils/) porque el driver pg devuelve NUMERIC como string — se reutiliza en animal.valor_comercial_* e historial_peso.peso_kg. 7) Incidente de seguridad menor: apareció un token FlyV1 (deploy de Fly.io) pegado por error en backend/.env — se removió; pertenece a GitHub Actions secrets (FLY_API_TOKEN) para .github/workflows/deploy-backend.yml, no a este archivo. | Probado end-to-end contra Supabase real: POST /animales (201), código duplicado (400), POST /peso (201) con numericTransformer devolviendo pesoActual como number (320.5, no string), GET /animales/{id} y GET /animales (batch query de pesos sin N+1) con pesoActual correcto, POST /mortalidad (200, transacción atómica mortalidad+animal.estado), segundo intento de mortalidad (409), estado final "muerto" persistido. Queda un registro de prueba VACA-001 (muerto) en la finca de seed de Supabase. |
+
+---
+
+## INCONSISTENCIAS ABIERTAS
+> Problemas entre contrato y schema que aún no tienen decisión.
+
+- **animal.buscar / "nombre"**: contrato dice "busca por codigo, raza o nombre parcial" pero animal (schema.sql) no tiene columna nombre. Implementado sobre codigo+raza. Falta decidir si es error de redacción del contrato o si falta agregar el campo.
+- **AnimalResponse.potreroActualId / enGestacion / conteoReproduccion**: dependen de movimiento_ganado (PotreroModule) y reproduccion (ReproduccionModule), ninguno existe aún. Devuelven placeholders (null/false/{0,0}) — hay que volver a animal.service.ts cuando esos módulos existan y conectarlos.
+- **GET /animales?potreroId=**: aceptado en el DTO de query, no filtra nada todavía (misma dependencia de arriba).
+
+---
+
+## DECISIONES PERMANENTES
+> Cosas que se decidieron una vez y no se vuelven a discutir.
+
+| Fecha | Decisión |
+|---|---|
+| 2026-06-24 | nivel_escalamiento eliminado → tipo_aprobacion |
+| 2026-06-24 | Roles: dueno_finca, administrador_finca, veterinario, usuario_consulta |
+| 2026-06-24 | finca_id siempre del JWT, nunca del cliente |
+| 2026-06-24 | auto_aprobado=true es permanente, nunca revertir |
+| 2026-06-24 | codigo en Animal y Finca es asignable por usuario, id UUID es interno |

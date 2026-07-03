@@ -1,0 +1,30 @@
+name: Deploy Backend — Fly.io
+
+on:
+  push:
+    branches:
+      - main                              # Solo deploya cuando se mergea a main
+    paths:
+      - 'ganadosmart/backend/**'          # Solo si cambia el backend
+      - '.github/workflows/deploy-backend.yml'  # O si cambia este workflow
+
+  # Permite correrlo manualmente desde GitHub → Actions → Run workflow
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy a Fly.io
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Instalar Fly CLI
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy a Fly.io
+        working-directory: ganadosmart/backend   # ← clave: el fly.toml vive aquí
+        run: flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

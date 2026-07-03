@@ -1,0 +1,1262 @@
+openapi: 3.0.3
+info:
+  title: GanadoSmart API
+  description: >
+    Contrato de API v2.0 — alineado con schema.sql v1.1 y DER v2.0.
+    Cambios respecto a v1.1:
+      - Roles actualizados: dueno_finca, administrador_finca, veterinario, usuario_consulta
+      - nivel_escalamiento eliminado → tipo_aprobacion + configuracion_aprobacion
+      - Campo codigo agregado en Animal y Finca (asignable por el usuario)
+      - Endpoint de configuracion de aprobacion actualizado con umbral por monto
+      - Sincronizacion offline completa (2 endpoints)
+      - Paginacion en todos los listados
+      - Codigos de error especificos (400, 409)
+  version: 2.0.0
+  contact:
+    name: JZSolutions
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Local
+  - url: https://ganadosmart-staging.up.railway.app/api/v1
+    description: Staging
+  - url: https://ganadosmart.up.railway.app/api/v1
+    description: Produccion (piloto)
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  # ─────────────────────────────────────────────
+  # PARAMETROS REUTILIZABLES
+  # ─────────────────────────────────────────────
+  parameters:
+    PaginaParam:
+      name: pagina
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    LimiteParam:
+      name: limite
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    IdPath:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+
+  # ─────────────────────────────────────────────
+  # RESPUESTAS REUTILIZABLES
+  # ─────────────────────────────────────────────
+  responses:
+    NoAutorizado:
+      description: Token JWT ausente o inválido
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Prohibido:
+      description: El rol del usuario no tiene permiso para esta operación
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    NoEncontrado:
+      description: Recurso no existe o no pertenece a la finca del usuario
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    SolicitudInvalida:
+      description: Datos de entrada inválidos o referencia inexistente
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    ConflictoDeEstado:
+      description: >
+        La acción no es válida para el estado actual del recurso.
+        Ejemplo: aprobar una venta que ya está aprobada.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  # ─────────────────────────────────────────────
+  # SCHEMAS — ENUMS (reflejan exactamente los tipos del schema.sql)
+  # ─────────────────────────────────────────────
+  schemas:
+
+    RolUsuario:
+      type: string
+      enum: [dueno_finca, administrador_finca, veterinario, usuario_consulta]
+
+    CategoriaAnimal:
+      type: string
+      enum: [toro, vaca, becerro]
+
+    SexoAnimal:
+      type: string
+      enum: [macho, hembra]
+
+    EstadoAnimal:
+      type: string
+      enum: [activo, en_tratamiento, vendido, muerto]
+
+    TipoReproduccion:
+      type: string
+      enum: [monta_natural, inseminacion]
+
+    EstadoReproduccion:
+      type: string
+      enum: [en_curso, exitoso, fallido]
+
+    EstadoPotrero:
+      type: string
+      enum: [en_uso, disponible, descanso, mantenimiento]
+
+    EstadoAprobacion:
+      type: string
+      enum: [pendiente, aprobado, rechazado]
+
+    TipoAprobacion:
+      type: string
+      enum: [directa, por_monto, por_tiempo, pendiente]
+      description: >
+        Reemplaza nivel_escalamiento del diseño anterior.
+        directa = el Dueño aprobó manualmente.
+        por_monto = monto estaba bajo el umbral configurado.
+        por_tiempo = venció el plazo de espera.
+        pendiente = aún sin resolver.
+
+    CategoriaGasto:
+      type: string
+      enum: [insumos, nomina, veterinario, otro]
+
+    TipoOrigenAlerta:
+      type: string
+      enum: [animal, venta, gasto]
+
+    SeveridadAlerta:
+      type: string
+      enum: [critica, alta, media, info]
+
+    TipoAccionSync:
+      type: string
+      enum: [registrar_peso, registrar_mortalidad, registrar_movimiento]
+
+    EstadoSync:
+      type: string
+      enum: [pendiente, aplicado, conflicto, error]
+
+    # ─────────────────────────────────────────────
+    # SCHEMAS — PAGINACIÓN
+    # ─────────────────────────────────────────────
+    PaginacionMeta:
+      type: object
+      properties:
+        paginaActual:   { type: integer, example: 1 }
+        totalPaginas:   { type: integer, example: 8 }
+        totalRegistros: { type: integer, example: 154 }
+        limite:         { type: integer, example: 20 }
+
+    # ─────────────────────────────────────────────
+    # SCHEMAS — ERROR
+    # ─────────────────────────────────────────────
+    ErrorResponse:
+      type: object
+      properties:
+        statusCode: { type: integer, example: 403 }
+        message:    { type: string,  example: "No tiene permisos para esta operación" }
+        error:      { type: string,  example: "Forbidden" }
+
+    # ─────────────────────────────────────────────
+    # SCHEMAS — USUARIO
+    # ─────────────────────────────────────────────
+    UsuarioResponse:
+      type: object
+      properties:
+        id:           { type: string, format: uuid }
+        fincaId:      { type: string, format: uuid }
+        nombre:       { type: string }
+        correo:       { type: string }
+        rol:          { $ref: '#/components/schemas/RolUsuario' }
+        activo:       { type: boolean }
+        ultimoAcceso: { type: string, format: date-time, nullable: true }
+        createdAt:    { type: string, format: date-time }
+
+    CrearUsuarioDto:
+      type: object
+      required: [nombre, correo, contrasena, rol]
+      properties:
+        nombre:    { type: string }
+        correo:    { type: string, format: email }
+        contrasena: { type: string, format: password }
+        rol:       { $ref: '#/components/schemas/RolUsuario' }
+
+    # ─────────────────────────────────────────────
+    # SCHEMAS — CONFIGURACION APROBACION
+    # ─────────────────────────────────────────────
+    ConfiguracionAprobacionResponse:
+      type: object
+      properties:
+        id:                   { type: string, format: uuid }
+        fincaId:              { type: string, format: uuid }
+        montoUmbralAuto:
+          type: number
+          nullable: true
+          description: "Si el monto < este valor → auto-aprobado inmediato. NULL = desactivado."
+        diasEsperaAprobacion:
+          type: integer
+          nullable: true
+          description: "Días que espera al Dueño antes de auto-aprobar por tiempo. NULL = sin límite."
+        aplicaAVentas: { type: boolean }
+        aplicaAGastos: { type: boolean }
+        updatedAt:     { type: string, format: date-time }
+
+    ActualizarConfiguracionDto:
+      type: object
+      properties:
+        montoUmbralAuto:
+          type: number
+          nullable: true
+          description: "NULL para desactivar auto-aprobación por monto"
+        diasEsperaAprobacion:
+          type: integer
+          nullable: true
+          minimum: 1
+          description: "NULL para desactivar auto-aprobación por tiempo"
+        aplicaAVentas: { type: boolean }
+        aplicaAGastos: { type: boolean }
+
+    # ─────────────────────────────────────────────
+    # SCHEMAS — ANIMAL
+    # ─────────────────────────────────────────────
+    AnimalListItemResponse:
+      type: object
+      properties:
+        id:          { type: string, format: uuid }
+        codigo:
+          type: string
+          description: "Número de caravana/arete/chip — asignado por el usuario, único en la finca"
+        categoria:   { $ref: '#/components/schemas/CategoriaAnimal' }
+        sexo:        { $ref: '#/components/schemas/SexoAnimal' }
+        estado:      { $ref: '#/components/schemas/EstadoAnimal' }
+        raza:        { type: string, nullable: true }
+        pesoActual:
+          type: number
+          nullable: true
+          description: "Último peso registrado en historial_peso"
+        potreroActualId: { type: string, format: uuid, nullable: true }
+        enGestacion:
+          type: boolean
+          description: "TRUE si tiene una reproduccion en estado en_curso"
+
+    AnimalResponse:
+      allOf:
+        - $ref: '#/components/schemas/AnimalListItemResponse'
+        - type: object
+          properties:
+            madreId:                  { type: string, format: uuid, nullable: true }
+            padreId:                  { type: string, format: uuid, nullable: true }
+            fechaNacimiento:          { type: string, format: date, nullable: true }
+            valorComercialEstimado:   { type: number, nullable: true }
+            valorComercialAjustado:   { type: number, nullable: true }
+            fotoUrl:                  { type: string, nullable: true }
+            createdAt:                { type: string, format: date-time }
+            historialPeso:
+              type: array
+              items:
+                type: object
+                properties:
+                  pesoKg: { type: number }
+                  fecha:  { type: string, format: date }
+            conteoReproduccion:
+              type: object
+              description: "Conteo según sexo del animal"
+              properties:
+                inseminaciones:
+                  type: integer
+                  description: "Solo para hembras — COUNT de reproducciones donde vaca_id = este animal"
+                servicios:
+                  type: integer
+                  description: "Solo para machos — COUNT de reproducciones donde toro_id = este animal"
+
+    CrearAnimalDto:
+      type: object
+      required: [codigo, categoria, sexo]
+      properties:
+        codigo:          { type: string, description: "Número de caravana/arete/chip" }
+        categoria:       { $ref: '#/components/schemas/CategoriaAnimal' }
+        sexo:            { $ref: '#/components/schemas/SexoAnimal' }
+        fechaNacimiento: { type: string, format: date }
+        raza:            { type: string }
+        madreId:         { type: string, format: uuid }
+        padreId:         { type: string, format: uuid }
+
+    # ─────────────────────────────────────────────
+    # SCHEMAS — REPRODUCCION
+    # ─────────────────────────────────────────────
+    ReproduccionResponse:
+      type: object
+      properties:
+        id:                  { type: string, format: uuid }
+        fincaId:             { type: string, format: uuid }
+        toroId:              { type: string, format: uuid }
+        vacaId:              { type: string, format: uuid }
+        tipo:                { $ref: '#/components/schemas/TipoReproduccion' }
+        fecha:               { type: string, format: date }
+        fechaProbableParto:  { type: string, format: date, nullable: true }
+        estado:              { $ref: '#/components/schemas/EstadoReproduccion' }
+        becerroResultanteId: { type: string, format: uuid, nullable: true }
+        createdAt:           { type: string, format: date-time }
+
+    # ─────────────────────────────────────────────
+    # SCHEMAS — POTRERO
+    # ─────────────────────────────────────────────
+    PotreroResponse:
+      type: object
+      properties:
+        id:                { type: string, format: uuid }
+        fincaId:           { type: string, format: uuid }
+        nombre:            { type: string, description: "Nombre libre: 'Potrero Norte', 'La Laguna', etc." }
+        hectareas:         { type: number, nullable: true }
+        tipoPasto:         { type: string, nullable: true }
+        capacidadEstimada: { type: integer, nullable: true }
+        estado:            { $ref: '#/components/schemas/EstadoPotrero' }
+
+    CrearPotreroDto:
+      type: object
+      required: [nombre]
+      properties:
+        nombre:            { type: string }
+        hectareas:         { type: number }
+        tipoPasto:         { type: string }
+        capacidadEstimada: { type: integer }
+
+    MovimientoResponse:
+      type: object
+      properties:
+        id:                { type: string, format: uuid }
+        animalId:          { type: string, format: uuid }
+        potreroOrigenId:   { type: string, format: uuid }
+        potreroDestinoId:  { type: string, format: uuid }
+        fecha:             { type: string, format: date }
+        observacion:       { type: string, nullable: true }
+
+    # ─────────────────────────────────────────────
+    # SCHEMAS — VENTA
+    # ─────────────────────────────────────────────
+    VentaResponse:
+      type: object
+      properties:
+        id:               { type: string, format: uuid }
+        fincaId:          { type: string, format: uuid }
+        animalId:         { type: string, format: uuid, nullable: true }
+        comprador:        { type: string }
+        monto:            { type: number }
+        fecha:            { type: string, format: date }
+        estadoAprobacion: { $ref: '#/components/schemas/EstadoAprobacion' }
+        tipoAprobacion:   { $ref: '#/components/schemas/TipoAprobacion' }
+        autoAprobado:
+          type: boolean
+          description: "Marca permanente — TRUE si se aprobó sin acción del Dueño (por_monto o por_tiempo)"
+        creadoPor:        { type: string, format: uuid }
+        aprobadoPor:      { type: string, format: uuid, nullable: true }
+        motivoRechazo:    { type: string, nullable: true }
+        createdAt:        { type: string, format: date-time }
+
+    CrearVentaDto:
+      type: object
+      required: [comprador, monto, fecha]
+      properties:
+        animalId:  { type: string, format: uuid }
+        comprador: { type: string }
+        monto:     { type: number }
+        fecha:     { type: string, format: date }
+
+    # ─────────────────────────────────────────────
+    # SCHEMAS — GASTO
+    # ─────────────────────────────────────────────
+    GastoResponse:
+      type: object
+      properties:
+        id:               { type: string, format: uuid }
+        fincaId:          { type: string, format: uuid }
+        categoria:        { $ref: '#/components/schemas/CategoriaGasto' }
+        monto:            { type: number }
+        descripcion:      { type: string, nullable: true }
+        fecha:            { type: string, format: date }
+        estadoAprobacion: { $ref: '#/components/schemas/EstadoAprobacion' }
+        tipoAprobacion:   { $ref: '#/components/schemas/TipoAprobacion' }
+        autoAprobado:     { type: boolean }
+        creadoPor:        { type: string, format: uuid }
+        aprobadoPor:      { type: string, format: uuid, nullable: true }
+        motivoRechazo:    { type: string, nullable: true }
+        createdAt:        { type: string, format: date-time }
+
+    CrearGastoDto:
+      type: object
+      required: [categoria, monto, fecha]
+      properties:
+        categoria:   { $ref: '#/components/schemas/CategoriaGasto' }
+        monto:       { type: number }
+        descripcion: { type: string }
+        fecha:       { type: string, format: date }
+
+    # ─────────────────────────────────────────────
+    # SCHEMAS — REPORTES
+    # ─────────────────────────────────────────────
+    DashboardResponse:
+      type: object
+      properties:
+        totalAnimales:        { type: integer }
+        vacas:                { type: integer }
+        toros:                { type: integer }
+        becerros:             { type: integer }
+        pesoPromedio:         { type: number, nullable: true }
+        tasaNatalidad:        { type: number }
+        tasaMortalidad:       { type: number }
+        ingresosMes:          { type: number }
+        gastosMes:            { type: number }
+        balanceMes:           { type: number }
+        valorEstimadoHato:    { type: number }
+        pendientesAprobacion: { type: integer }
+        porcentajeAutoAprobado:
+          type: number
+          description: "Métrica de éxito PRD §4 — % de transacciones auto-aprobadas"
+        actividadReciente:
+          type: object
+          properties:
+            pesosUltimos7Dias:      { type: integer }
+            cambiosEstadoSalud:     { type: integer }
+            inseminacionesRegistradas: { type: integer }
+            proximosAParto:         { type: integer }
+        distribucionPorSexo:
+          type: object
+          properties:
+            machos:  { type: integer }
+            hembras: { type: integer }
+
+    IngresosVsGastosResponse:
+      type: object
+      properties:
+        totalIngresos: { type: number }
+        totalGastos:   { type: number }
+        balance:       { type: number }
+        desglosePorCategoria:
+          type: array
+          items:
+            type: object
+            properties:
+              categoria: { $ref: '#/components/schemas/CategoriaGasto' }
+              monto:     { type: number }
+        transacciones:
+          type: array
+          items:
+            type: object
+            properties:
+              tipo:     { type: string, enum: [venta, gasto] }
+              fecha:    { type: string, format: date }
+              monto:    { type: number }
+              estado:   { $ref: '#/components/schemas/EstadoAprobacion' }
+              tipo_aprobacion: { $ref: '#/components/schemas/TipoAprobacion' }
+
+    # ─────────────────────────────────────────────
+    # SCHEMAS — ALERTA
+    # ─────────────────────────────────────────────
+    AlertaResponse:
+      type: object
+      properties:
+        id:           { type: string, format: uuid }
+        fincaId:      { type: string, format: uuid }
+        referenciaId: { type: string, format: uuid }
+        tipoOrigen:   { $ref: '#/components/schemas/TipoOrigenAlerta' }
+        mensaje:      { type: string }
+        severidad:    { $ref: '#/components/schemas/SeveridadAlerta' }
+        leida:        { type: boolean }
+        fecha:        { type: string, format: date-time }
+
+    # ─────────────────────────────────────────────
+    # SCHEMAS — SINCRONIZACION
+    # ─────────────────────────────────────────────
+    AccionSincronizacion:
+      type: object
+      required: [tipo, timestampLocal, datos]
+      properties:
+        tipo:           { $ref: '#/components/schemas/TipoAccionSync' }
+        timestampLocal: { type: string, format: date-time }
+        versionBase:    { type: string, nullable: true }
+        datos:
+          type: object
+          description: >
+            Payload según tipo:
+            registrar_peso → { animalId, pesoKg, fecha }
+            registrar_mortalidad → { animalId, fecha, causa }
+            registrar_movimiento → { animalId, potreroOrigenId, potreroDestinoId, fecha }
+
+    ResultadoSincronizacion:
+      type: object
+      properties:
+        accionId: { type: string, format: uuid }
+        estado:   { $ref: '#/components/schemas/EstadoSync' }
+        detalleConflicto:
+          type: object
+          nullable: true
+          properties:
+            versionLocal:    { type: object }
+            versionServidor: { type: object }
+
+# ================================================================
+# PATHS
+# ================================================================
+paths:
+
+  # ──────────────────────────────────────────
+  # MODULO 1 — AUTENTICACION
+  # ──────────────────────────────────────────
+  /auth/login:
+    post:
+      tags: [Autenticacion]
+      summary: Iniciar sesión — obtiene el token JWT
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [correo, contrasena]
+              properties:
+                correo:     { type: string, format: email }
+                contrasena: { type: string }
+      responses:
+        '200':
+          description: Login exitoso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken: { type: string }
+                  usuario:     { $ref: '#/components/schemas/UsuarioResponse' }
+        '401':
+          description: Credenciales inválidas
+
+  # ──────────────────────────────────────────
+  # MODULO 2 — USUARIOS
+  # ──────────────────────────────────────────
+  /usuarios:
+    get:
+      tags: [Usuarios]
+      summary: Listar usuarios de la finca
+      parameters:
+        - $ref: '#/components/parameters/PaginaParam'
+        - $ref: '#/components/parameters/LimiteParam'
+      responses:
+        '200':
+          description: Lista paginada de usuarios
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  datos: { type: array, items: { $ref: '#/components/schemas/UsuarioResponse' } }
+                  meta:  { $ref: '#/components/schemas/PaginacionMeta' }
+        '403': { $ref: '#/components/responses/Prohibido' }
+
+    post:
+      tags: [Usuarios]
+      summary: Crear usuario — solo Dueño de finca
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CrearUsuarioDto' }
+      responses:
+        '201':
+          description: Usuario creado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UsuarioResponse' }
+        '400': { $ref: '#/components/responses/SolicitudInvalida' }
+        '403': { $ref: '#/components/responses/Prohibido' }
+
+  # ──────────────────────────────────────────
+  # MODULO 3 — CONFIGURACION DE APROBACION
+  # ──────────────────────────────────────────
+  /configuracion/aprobacion:
+    get:
+      tags: [Configuracion]
+      summary: Ver configuración de aprobación de la finca
+      responses:
+        '200':
+          description: Configuración actual
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConfiguracionAprobacionResponse' }
+        '403': { $ref: '#/components/responses/Prohibido' }
+
+    patch:
+      tags: [Configuracion]
+      summary: >
+        Actualizar configuración de aprobación — solo Dueño de finca.
+        Aquí el Dueño define su nivel de confianza:
+        cuánto puede auto-aprobarse por monto y cuántos días espera antes
+        de que el sistema auto-apruebe por tiempo.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ActualizarConfiguracionDto' }
+      responses:
+        '200':
+          description: Configuración actualizada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConfiguracionAprobacionResponse' }
+        '403': { $ref: '#/components/responses/Prohibido' }
+
+  # ──────────────────────────────────────────
+  # MODULO 4 — ANIMALES
+  # ──────────────────────────────────────────
+  /animales:
+    get:
+      tags: [Animales]
+      summary: Listar animales de la finca con filtros
+      parameters:
+        - name: estado
+          in: query
+          schema: { $ref: '#/components/schemas/EstadoAnimal' }
+        - name: sexo
+          in: query
+          schema: { $ref: '#/components/schemas/SexoAnimal' }
+        - name: categoria
+          in: query
+          schema: { $ref: '#/components/schemas/CategoriaAnimal' }
+        - name: potreroId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: buscar
+          in: query
+          description: Busca por codigo, raza o nombre parcial
+          schema: { type: string }
+        - $ref: '#/components/parameters/PaginaParam'
+        - $ref: '#/components/parameters/LimiteParam'
+      responses:
+        '200':
+          description: Lista paginada de animales
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  datos: { type: array, items: { $ref: '#/components/schemas/AnimalListItemResponse' } }
+                  meta:  { $ref: '#/components/schemas/PaginacionMeta' }
+
+    post:
+      tags: [Animales]
+      summary: Registrar animal nuevo — Dueño o Administrador
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CrearAnimalDto' }
+      responses:
+        '201':
+          description: Animal creado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AnimalResponse' }
+        '400': { $ref: '#/components/responses/SolicitudInvalida' }
+        '403': { $ref: '#/components/responses/Prohibido' }
+
+  /animales/{id}:
+    get:
+      tags: [Animales]
+      summary: Detalle completo — incluye genealogía, historial de peso y conteo reproductivo
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Detalle del animal
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AnimalResponse' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+
+    patch:
+      tags: [Animales]
+      summary: Editar datos del animal — Dueño o Administrador
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CrearAnimalDto' }
+      responses:
+        '200':
+          description: Animal actualizado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AnimalResponse' }
+        '403': { $ref: '#/components/responses/Prohibido' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+
+  /animales/{id}/peso:
+    post:
+      tags: [Animales]
+      summary: Registrar peso — Dueño, Administrador o Veterinario
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pesoKg, fecha]
+              properties:
+                pesoKg: { type: number, example: 320.5 }
+                fecha:  { type: string, format: date }
+      responses:
+        '201':
+          description: Peso registrado
+        '400': { $ref: '#/components/responses/SolicitudInvalida' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+
+  /animales/{id}/mortalidad:
+    post:
+      tags: [Animales]
+      summary: Registrar mortalidad — cambia estado a muerto, no reversible
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fecha, causa]
+              properties:
+                fecha: { type: string, format: date }
+                causa: { type: string }
+      responses:
+        '200':
+          description: Mortalidad registrada, estado del animal cambiado a muerto
+        '409': { $ref: '#/components/responses/ConflictoDeEstado' }
+
+  /animales/{id}/foto:
+    patch:
+      tags: [Animales]
+      summary: Actualizar URL de foto del animal
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fotoUrl]
+              properties:
+                fotoUrl: { type: string, description: "URL del bucket externo (Supabase Storage)" }
+      responses:
+        '200':
+          description: Foto actualizada
+
+  # ──────────────────────────────────────────
+  # MODULO 5 — REPRODUCCION
+  # ──────────────────────────────────────────
+  /reproducciones:
+    get:
+      tags: [Reproduccion]
+      summary: Listar eventos reproductivos
+      parameters:
+        - name: estado
+          in: query
+          schema: { $ref: '#/components/schemas/EstadoReproduccion' }
+        - name: vacaId
+          in: query
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/PaginaParam'
+        - $ref: '#/components/parameters/LimiteParam'
+      responses:
+        '200':
+          description: Lista paginada de reproducciones
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  datos: { type: array, items: { $ref: '#/components/schemas/ReproduccionResponse' } }
+                  meta:  { $ref: '#/components/schemas/PaginacionMeta' }
+
+    post:
+      tags: [Reproduccion]
+      summary: Registrar monta o inseminación — Dueño, Administrador o Veterinario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [toroId, vacaId, tipo, fecha]
+              properties:
+                toroId: { type: string, format: uuid }
+                vacaId: { type: string, format: uuid }
+                tipo:   { $ref: '#/components/schemas/TipoReproduccion' }
+                fecha:  { type: string, format: date }
+      responses:
+        '201':
+          description: Reproducción registrada en estado en_curso
+        '400': { $ref: '#/components/responses/SolicitudInvalida' }
+        '409':
+          description: La vaca ya tiene un evento reproductivo en_curso activo
+
+  /reproducciones/{id}/confirmar-parto:
+    patch:
+      tags: [Reproduccion]
+      summary: >
+        Confirmar resultado del parto. Si es exitoso, crea automáticamente
+        el ANIMAL becerro con madre_id y padre_id heredados.
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [resultado]
+              properties:
+                resultado: { type: string, enum: [exitoso, fallido] }
+                becerro:
+                  type: object
+                  description: Requerido solo si resultado = exitoso
+                  properties:
+                    sexo:            { $ref: '#/components/schemas/SexoAnimal' }
+                    codigo:          { type: string, description: "Caravana/arete del becerro" }
+                    pesoNacimiento:  { type: number }
+                    fechaNacimiento: { type: string, format: date }
+      responses:
+        '200':
+          description: Parto confirmado — becerro creado si resultado fue exitoso
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReproduccionResponse' }
+        '409': { $ref: '#/components/responses/ConflictoDeEstado' }
+
+  # ──────────────────────────────────────────
+  # MODULO 6 — POTREROS
+  # ──────────────────────────────────────────
+  /potreros:
+    get:
+      tags: [Potreros]
+      summary: Listar potreros de la finca
+      responses:
+        '200':
+          description: Lista de potreros
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/PotreroResponse' }
+
+    post:
+      tags: [Potreros]
+      summary: Crear potrero — Dueño o Administrador
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CrearPotreroDto' }
+      responses:
+        '201':
+          description: Potrero creado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PotreroResponse' }
+        '400': { $ref: '#/components/responses/SolicitudInvalida' }
+
+  /potreros/{id}:
+    patch:
+      tags: [Potreros]
+      summary: Editar potrero — Dueño o Administrador
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CrearPotreroDto' }
+      responses:
+        '200':
+          description: Potrero actualizado
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+
+  /potreros/movimientos:
+    get:
+      tags: [Potreros]
+      summary: Listar histórico de movimientos
+      parameters:
+        - name: animalId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: potreroId
+          in: query
+          description: Filtra movimientos donde este potrero fue origen o destino
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/PaginaParam'
+        - $ref: '#/components/parameters/LimiteParam'
+      responses:
+        '200':
+          description: Lista paginada de movimientos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  datos: { type: array, items: { $ref: '#/components/schemas/MovimientoResponse' } }
+                  meta:  { $ref: '#/components/schemas/PaginacionMeta' }
+
+    post:
+      tags: [Potreros]
+      summary: Registrar movimiento de animal entre potreros
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [animalId, potreroOrigenId, potreroDestinoId, fecha]
+              properties:
+                animalId:          { type: string, format: uuid }
+                potreroOrigenId:   { type: string, format: uuid }
+                potreroDestinoId:  { type: string, format: uuid }
+                fecha:             { type: string, format: date }
+                observacion:       { type: string }
+      responses:
+        '201':
+          description: Movimiento registrado (solo histórico)
+        '400': { $ref: '#/components/responses/SolicitudInvalida' }
+
+  # ──────────────────────────────────────────
+  # MODULO 7 — VENTAS
+  # ──────────────────────────────────────────
+  /ventas:
+    get:
+      tags: [Ventas]
+      summary: >
+        Listar ventas — solo Dueño y Administrador.
+        soloMisAprobaciones=true filtra las que el usuario autenticado
+        debe resolver (pendiente y aún no vencidas).
+      parameters:
+        - name: estadoAprobacion
+          in: query
+          schema: { $ref: '#/components/schemas/EstadoAprobacion' }
+        - name: soloMisAprobaciones
+          in: query
+          schema: { type: boolean, default: false }
+        - name: fechaInicio
+          in: query
+          schema: { type: string, format: date }
+        - name: fechaFin
+          in: query
+          schema: { type: string, format: date }
+        - $ref: '#/components/parameters/PaginaParam'
+        - $ref: '#/components/parameters/LimiteParam'
+      responses:
+        '200':
+          description: Lista paginada de ventas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  datos: { type: array, items: { $ref: '#/components/schemas/VentaResponse' } }
+                  meta:  { $ref: '#/components/schemas/PaginacionMeta' }
+        '403': { $ref: '#/components/responses/Prohibido' }
+
+    post:
+      tags: [Ventas]
+      summary: >
+        Registrar venta. El backend aplica automáticamente la
+        configuracion_aprobacion de la finca para decidir si se
+        auto-aprueba por monto o queda pendiente.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CrearVentaDto' }
+      responses:
+        '201':
+          description: Venta creada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VentaResponse' }
+        '400': { $ref: '#/components/responses/SolicitudInvalida' }
+
+  /ventas/{id}/aprobar:
+    patch:
+      tags: [Ventas]
+      summary: Aprobar venta pendiente — solo Dueño de finca
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Venta aprobada — tipo_aprobacion queda como directa
+        '403': { $ref: '#/components/responses/Prohibido' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+        '409': { $ref: '#/components/responses/ConflictoDeEstado' }
+
+  /ventas/{id}/rechazar:
+    patch:
+      tags: [Ventas]
+      summary: Rechazar venta pendiente — solo Dueño de finca
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                motivo: { type: string }
+      responses:
+        '200':
+          description: Venta rechazada — registro queda como histórico
+        '403': { $ref: '#/components/responses/Prohibido' }
+        '409': { $ref: '#/components/responses/ConflictoDeEstado' }
+
+  # ──────────────────────────────────────────
+  # MODULO 8 — GASTOS
+  # ──────────────────────────────────────────
+  /gastos:
+    get:
+      tags: [Gastos]
+      summary: Listar gastos — solo Dueño y Administrador
+      parameters:
+        - name: categoria
+          in: query
+          schema: { $ref: '#/components/schemas/CategoriaGasto' }
+        - name: estadoAprobacion
+          in: query
+          schema: { $ref: '#/components/schemas/EstadoAprobacion' }
+        - name: soloMisAprobaciones
+          in: query
+          schema: { type: boolean, default: false }
+        - $ref: '#/components/parameters/PaginaParam'
+        - $ref: '#/components/parameters/LimiteParam'
+      responses:
+        '200':
+          description: Lista paginada de gastos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  datos: { type: array, items: { $ref: '#/components/schemas/GastoResponse' } }
+                  meta:  { $ref: '#/components/schemas/PaginacionMeta' }
+        '403': { $ref: '#/components/responses/Prohibido' }
+
+    post:
+      tags: [Gastos]
+      summary: Registrar gasto — mismo comportamiento de auto-aprobación que Venta
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CrearGastoDto' }
+      responses:
+        '201':
+          description: Gasto creado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GastoResponse' }
+        '400': { $ref: '#/components/responses/SolicitudInvalida' }
+
+  /gastos/{id}/aprobar:
+    patch:
+      tags: [Gastos]
+      summary: Aprobar gasto — solo Dueño de finca
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Gasto aprobado
+        '403': { $ref: '#/components/responses/Prohibido' }
+        '409': { $ref: '#/components/responses/ConflictoDeEstado' }
+
+  /gastos/{id}/rechazar:
+    patch:
+      tags: [Gastos]
+      summary: Rechazar gasto — solo Dueño de finca
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                motivo: { type: string }
+      responses:
+        '200':
+          description: Gasto rechazado
+        '409': { $ref: '#/components/responses/ConflictoDeEstado' }
+
+  # ──────────────────────────────────────────
+  # MODULO 9 — REPORTES
+  # ──────────────────────────────────────────
+  /reportes/dashboard:
+    get:
+      tags: [Reportes]
+      summary: >
+        KPIs del Dashboard — solo Dueño y Administrador.
+        Incluye distribución por sexo y actividad reciente.
+      responses:
+        '200':
+          description: Datos completos del dashboard
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DashboardResponse' }
+        '403': { $ref: '#/components/responses/Prohibido' }
+
+  /reportes/ingresos-vs-gastos:
+    get:
+      tags: [Reportes]
+      summary: Reporte financiero detallado con filtros
+      parameters:
+        - name: fechaInicio
+          in: query
+          schema: { type: string, format: date }
+        - name: fechaFin
+          in: query
+          schema: { type: string, format: date }
+        - name: categoria
+          in: query
+          schema: { $ref: '#/components/schemas/CategoriaGasto' }
+      responses:
+        '200':
+          description: Reporte detallado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IngresosVsGastosResponse' }
+        '403': { $ref: '#/components/responses/Prohibido' }
+
+  # ──────────────────────────────────────────
+  # MODULO 10 — ALERTAS
+  # ──────────────────────────────────────────
+  /alertas:
+    get:
+      tags: [Alertas]
+      summary: Listar alertas — Dueño y Administrador
+      parameters:
+        - name: tipoOrigen
+          in: query
+          schema: { $ref: '#/components/schemas/TipoOrigenAlerta' }
+        - name: leida
+          in: query
+          schema: { type: boolean }
+        - $ref: '#/components/parameters/PaginaParam'
+        - $ref: '#/components/parameters/LimiteParam'
+      responses:
+        '200':
+          description: Lista paginada de alertas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  datos: { type: array, items: { $ref: '#/components/schemas/AlertaResponse' } }
+                  meta:  { $ref: '#/components/schemas/PaginacionMeta' }
+
+  /alertas/{id}/marcar-leida:
+    patch:
+      tags: [Alertas]
+      summary: Marcar alerta como leída
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Alerta marcada como leída
+
+  # ──────────────────────────────────────────
+  # MODULO 11 — SINCRONIZACION OFFLINE (solo móvil)
+  # ──────────────────────────────────────────
+  /sincronizacion/lote:
+    post:
+      tags: [Sincronizacion]
+      summary: >
+        Enviar lote de acciones acumuladas offline.
+        El backend procesa en orden cronológico y devuelve
+        el resultado de cada acción (aplicado / conflicto / error).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [acciones]
+              properties:
+                acciones:
+                  type: array
+                  items: { $ref: '#/components/schemas/AccionSincronizacion' }
+      responses:
+        '200':
+          description: Lote procesado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  resultados:
+                    type: array
+                    items: { $ref: '#/components/schemas/ResultadoSincronizacion' }
+
+  /sincronizacion/resolver-conflicto:
+    post:
+      tags: [Sincronizacion]
+      summary: Resolver conflicto de edición concurrente detectado en el lote
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [accionId, decision]
+              properties:
+                accionId: { type: string, format: uuid }
+                decision:
+                  type: string
+                  enum: [usar_local, usar_servidor]
+      responses:
+        '200':
+          description: Conflicto resuelto y cambio aplicado
+
+tags:
+  - name: Autenticacion
+    description: Login y obtención del token JWT
+  - name: Usuarios
+    description: Gestión de usuarios — 4 roles
+  - name: Configuracion
+    description: Configuración de umbrales de auto-aprobación por finca
+  - name: Animales
+    description: Inventario, genealogía, peso, mortalidad, foto
+  - name: Reproduccion
+    description: Montas, inseminaciones, partos y genealogía automática
+  - name: Potreros
+    description: Gestión de potreros y movimiento histórico de animales
+  - name: Ventas
+    description: Registro y flujo de aprobación con umbrales configurables
+  - name: Gastos
+    description: Gastos operativos categorizados — mismo flujo que Ventas
+  - name: Reportes
+    description: Dashboard y reporte financiero — solo lectura
+  - name: Alertas
+    description: Notificaciones de origen animal, venta o gasto
+  - name: Sincronizacion
+    description: Cola offline del móvil y resolución de conflictos
