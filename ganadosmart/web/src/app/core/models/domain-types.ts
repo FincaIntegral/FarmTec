@@ -1,0 +1,15 @@
+﻿export type RolUsuario = 'dueno_finca' | 'administrador_finca' | 'veterinario' | 'usuario_consulta';
+export type CategoriaAnimal = 'toro' | 'vaca' | 'becerro';
+export type SexoAnimal = 'macho' | 'hembra';
+export type EstadoAnimal = 'activo' | 'en_tratamiento' | 'vendido' | 'muerto';
+export type TipoReproduccion = 'monta_natural' | 'inseminacion';
+export type EstadoReproduccion = 'en_curso' | 'exitoso' | 'fallido';
+export type EstadoPotrero = 'en_uso' | 'disponible' | 'descanso' | 'mantenimiento';
+export type EstadoAprobacion = 'pendiente' | 'aprobado' | 'rechazado';
+export type TipoAprobacion = 'directa' | 'por_monto' | 'por_tiempo' | 'pendiente';
+export type CategoriaGasto = 'insumos' | 'nomina' | 'veterinario' | 'otro';
+export type TipoOrigenAlerta = 'animal' | 'venta' | 'gasto';
+export type SeveridadAlerta = 'critica' | 'alta' | 'media' | 'info';
+export type TipoAccionSync = 'registrar_peso' | 'registrar_mortalidad' | 'registrar_movimiento';
+export type EstadoSync = 'pendiente' | 'aplicado' | 'conflicto' | 'error';
+export type JsonObject = Record<string, unknown>;
