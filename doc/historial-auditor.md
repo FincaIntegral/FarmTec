@@ -26,14 +26,16 @@ Estados posibles: INICIADO · EN_CURSO · COMPLETO · BLOQUEADO · PARCIAL
 
 | 2026-07-04 | configuracion | COMPLETO | 1) GET /configuracion/aprobacion no define qué pasa si la finca no tiene fila (finca nueva) — se decidió crear la fila con los defaults del schema (umbrales NULL, aplica a ambos) en vez de devolver 404. 2) El contrato no incluye configurado_por en la response — se persiste (viene del JWT en cada PATCH) pero no se expone. 3) Entorno de esta sesión sin backend/.env ni Docker corriendo — se probó con unit tests (repos mockeados); e2e contra BD real pendiente de DATABASE_URL. | GET abierto a todos los roles autenticados, PATCH solo dueno_finca. Service exportado para que Venta/Gasto lean la config al aplicar auto-aprobación. También en este commit: doc/CLAUDE.md des-duplicado, schema(1).sql renombrado a schema.sql, scaffold muerto de notificacion eliminado. |
 
+| 2026-07-04 | reproduccion | COMPLETO | 1) El contrato no acepta fecha_probable_parto en el POST pero la columna existe y el dashboard usa proximosAParto — se calcula automáticamente como fecha + 283 días (gestación bovina promedio). 2) confirmar-parto no define roles en el contrato — se igualó al POST (dueno+admin+vet). 3) pesoNacimiento del becerro no tiene tabla propia — se registra como primera fila de historial_peso dentro de la misma transacción. 4) Para evitar dependencia circular AnimalModule↔ReproduccionModule, ReproduccionRepository registra las entities Animal/HistorialPeso directamente (forFeature) en vez de importar AnimalModule; regla acordada: cada módulo puede LEER entities ajenas, solo escribe las propias — con la única excepción de la genealogía (reproduccion crea el becerro dentro de su transacción, es el requisito de negocio). | Genealogía en una sola transacción: crear becerro (madre_id=vaca_id, padre_id=toro_id, categoria=becerro), peso de nacimiento opcional, becerro_resultante_id + estado=exitoso. Validaciones POST: toro macho / vaca hembra de la finca, ni muertos ni vendidos, 409 si la vaca tiene evento en_curso (respaldado por el constraint EXCLUDE). Placeholders de animal conectados: enGestacion (batch, sin N+1) y conteoReproduccion reales; queda pendiente solo potreroActualId. 9 unit tests verdes. |
+
 ---
 
 ## INCONSISTENCIAS ABIERTAS
 > Problemas entre contrato y schema que aún no tienen decisión.
 
 - **animal.buscar / "nombre"**: contrato dice "busca por codigo, raza o nombre parcial" pero animal (schema.sql) no tiene columna nombre. Implementado sobre codigo+raza. Falta decidir si es error de redacción del contrato o si falta agregar el campo.
-- **AnimalResponse.potreroActualId / enGestacion / conteoReproduccion**: dependen de movimiento_ganado (PotreroModule) y reproduccion (ReproduccionModule), ninguno existe aún. Devuelven placeholders (null/false/{0,0}) — hay que volver a animal.service.ts cuando esos módulos existan y conectarlos.
-- **GET /animales?potreroId=**: aceptado en el DTO de query, no filtra nada todavía (misma dependencia de arriba).
+- **AnimalResponse.potreroActualId**: ~~enGestacion / conteoReproduccion~~ resueltos el 2026-07-04 con ReproduccionModule. potreroActualId sigue en null hasta que exista PotreroModule.
+- **GET /animales?potreroId=**: aceptado en el DTO de query, no filtra nada todavía (depende de movimiento_ganado / PotreroModule).
 
 ---
 

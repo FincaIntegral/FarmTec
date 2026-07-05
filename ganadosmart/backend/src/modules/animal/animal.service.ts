@@ -9,6 +9,7 @@ import {
   PaginatedResponse,
 } from '../../shared/dto/paginacion-meta.dto';
 import { EstadoAnimal } from '../../shared/enums/estado-animal.enum';
+import { ReproduccionRepository } from '../reproduccion/reproduccion.repository';
 import { AnimalRepository, FiltrosAnimal } from './animal.repository';
 import { ActualizarFotoDto } from './dto/actualizar-foto.dto';
 import { AnimalListItemResponse } from './dto/animal-list-item.dto';
@@ -19,7 +20,10 @@ import { RegistrarPesoDto } from './dto/registrar-peso.dto';
 
 @Injectable()
 export class AnimalService {
-  constructor(private readonly animalRepository: AnimalRepository) {}
+  constructor(
+    private readonly animalRepository: AnimalRepository,
+    private readonly reproduccionRepository: ReproduccionRepository,
+  ) {}
 
   async findAll(
     fincaId: string,
@@ -34,13 +38,19 @@ export class AnimalService {
       limite,
     );
 
-    const pesos = await this.animalRepository.getPesosActuales(
-      animales.map((a) => a.id),
-    );
+    const ids = animales.map((a) => a.id);
+    const [pesos, enGestacion] = await Promise.all([
+      this.animalRepository.getPesosActuales(ids),
+      this.reproduccionRepository.vacasEnGestacion(ids),
+    ]);
 
     return {
       datos: animales.map((animal) =>
-        AnimalListItemResponse.build(animal, pesos.get(animal.id) ?? null),
+        AnimalListItemResponse.build(
+          animal,
+          pesos.get(animal.id) ?? null,
+          enGestacion.has(animal.id),
+        ),
       ),
       meta: PaginacionMeta.build(total, pagina, limite),
     };
@@ -52,12 +62,20 @@ export class AnimalService {
       throw new NotFoundException('Animal no encontrado');
     }
 
-    const [pesoActual, historialPeso] = await Promise.all([
+    const [pesoActual, historialPeso, enGestacion, conteo] = await Promise.all([
       this.animalRepository.getPesoActual(id),
       this.animalRepository.getHistorialPeso(id),
+      this.reproduccionRepository.vacasEnGestacion([id]),
+      this.reproduccionRepository.conteoReproduccion(id, fincaId),
     ]);
 
-    return AnimalResponse.buildDetalle(animal, pesoActual, historialPeso);
+    return AnimalResponse.buildDetalle(
+      animal,
+      pesoActual,
+      historialPeso,
+      enGestacion.has(id),
+      conteo,
+    );
   }
 
   async create(dto: CrearAnimalDto, fincaId: string): Promise<AnimalResponse> {
@@ -89,7 +107,7 @@ export class AnimalService {
 
     await this.validarCodigoYPadres(dto, fincaId, id);
 
-    const animal = await this.animalRepository.update(id, fincaId, {
+    await this.animalRepository.update(id, fincaId, {
       codigo: dto.codigo,
       categoria: dto.categoria,
       sexo: dto.sexo,
@@ -99,12 +117,7 @@ export class AnimalService {
       padreId: dto.padreId,
     });
 
-    const [pesoActual, historialPeso] = await Promise.all([
-      this.animalRepository.getPesoActual(id),
-      this.animalRepository.getHistorialPeso(id),
-    ]);
-
-    return AnimalResponse.buildDetalle(animal!, pesoActual, historialPeso);
+    return this.findOne(id, fincaId);
   }
 
   async registrarPeso(
