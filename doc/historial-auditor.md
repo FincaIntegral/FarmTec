@@ -38,6 +38,8 @@ Estados posibles: INICIADO · EN_CURSO · COMPLETO · BLOQUEADO · PARCIAL
 
 | 2026-07-05 | alerta | COMPLETO | El contrato solo define GET /alertas y marcar-leida — no dice CUÁNDO se generan alertas. Decisión (revisable): se genera alerta severidad 'media' cuando una venta o gasto queda pendiente de aprobación (es lo que el Dueño necesita ver en la campanita); las auto-aprobadas no generan alerta. AlertaService.crear() es hook interno, no endpoint. No se generan aún alertas de origen 'animal' (¿mortalidad? ¿capacidad de potrero superada?) — decisión de negocio anotada abajo. | GET paginado con filtros tipoOrigen/leida + PATCH marcar-leida (404 si no es de la finca), dueno+admin. Venta y Gasto disparan la alerta al crear pendientes (verificado en sus specs: pendiente → alerta, auto-aprobada → sin alerta). Con esto los 9 módulos del backend del contrato v2 están COMPLETOS (falta solo sincronizacion, fase móvil). |
 
+| 2026-07-05 | deploy | EN_CURSO | 1) develop ya tenía fly.toml (app=farmtec, región gru) y Dockerfile de un deploy previo — se mergeó origin/develop a la feature branch. 2) El merge de main.ts vino con sintaxis rota (void bootstrap() dentro de la función) — corregido. 3) fly.toml exige health check GET /api/v1/health que no existía — se agregó HealthController @Public() como infraestructura (no es endpoint de negocio del contrato). 4) Se agregó .dockerignore (no existía: la imagen copiaba node_modules y .env). | Deploy vía GitHub Actions al push a develop (FLY_API_TOKEN en secrets). Ruta: push de feature/setup-monorepo + PR a develop. Los secrets DATABASE_URL/JWT_SECRET deben existir en la app farmtec de Fly (hubo un deploy exitoso el 2026-07-04, se asume que están). |
+
 ---
 
 ## INCONSISTENCIAS ABIERTAS

@@ -10,6 +10,7 @@ import { ReporteModule } from './modules/reporte/reporte.module';
 import { ReproduccionModule } from './modules/reproduccion/reproduccion.module';
 import { UsuarioModule } from './modules/usuario/usuario.module';
 import { VentaModule } from './modules/venta/venta.module';
+import { HealthController } from './shared/health.controller';
 
 @Module({
   imports: [
@@ -36,5 +37,6 @@ import { VentaModule } from './modules/venta/venta.module';
     ReporteModule,
     AlertaModule,
   ],
+  controllers: [HealthController],
 })
 export class AppModule {}
