@@ -1,0 +1,139 @@
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  PaginacionMeta,
+  PaginatedResponse,
+} from '../../shared/dto/paginacion-meta.dto';
+import { EstadoAprobacion } from '../../shared/enums/estado-aprobacion.enum';
+import { TipoAprobacion } from '../../shared/enums/tipo-aprobacion.enum';
+import { evaluarAutoAprobacionPorMonto } from '../../shared/utils/aprobacion.util';
+import { ConfiguracionService } from '../configuracion/configuracion.service';
+import { CrearVentaDto } from './dto/create-venta.dto';
+import { VentaResponse } from './dto/venta-response.dto';
+import { FiltrosVenta, VentaRepository } from './venta.repository';
+
+@Injectable()
+export class VentaService {
+  constructor(
+    private readonly ventaRepository: VentaRepository,
+    private readonly configuracionService: ConfiguracionService,
+  ) {}
+
+  // Aplica la auto-aprobación por tiempo pendiente antes de leer o resolver.
+  private async aplicarVencimientos(fincaId: string): Promise<void> {
+    const config = await this.configuracionService.obtenerOCrear(fincaId);
+    if (config.aplicaAVentas && config.diasEsperaAprobacion !== null) {
+      await this.ventaRepository.autoAprobarVencidas(
+        fincaId,
+        config.diasEsperaAprobacion,
+      );
+    }
+  }
+
+  async findAll(
+    fincaId: string,
+    filtros: FiltrosVenta,
+    pagina: number,
+    limite: number,
+  ): Promise<PaginatedResponse<VentaResponse>> {
+    await this.aplicarVencimientos(fincaId);
+
+    const [ventas, total] = await this.ventaRepository.findAllByFinca(
+      fincaId,
+      filtros,
+      pagina,
+      limite,
+    );
+    return {
+      datos: ventas.map((v) => VentaResponse.build(v)),
+      meta: PaginacionMeta.build(total, pagina, limite),
+    };
+  }
+
+  async create(
+    dto: CrearVentaDto,
+    fincaId: string,
+    creadoPor: string,
+  ): Promise<VentaResponse> {
+    if (
+      dto.animalId &&
+      !(await this.ventaRepository.findAnimalById(dto.animalId, fincaId))
+    ) {
+      throw new BadRequestException(
+        'animalId no corresponde a un animal de esta finca',
+      );
+    }
+
+    const config = await this.configuracionService.obtenerOCrear(fincaId);
+    const aprobacion = evaluarAutoAprobacionPorMonto(
+      dto.monto,
+      config.aplicaAVentas,
+      config,
+    );
+
+    const venta = await this.ventaRepository.create({
+      fincaId,
+      animalId: dto.animalId ?? null,
+      comprador: dto.comprador,
+      monto: dto.monto,
+      fecha: dto.fecha,
+      creadoPor,
+      ...aprobacion,
+    });
+    return VentaResponse.build(venta);
+  }
+
+  async aprobar(
+    id: string,
+    fincaId: string,
+    aprobadoPor: string,
+  ): Promise<VentaResponse> {
+    const venta = await this.obtenerPendiente(id, fincaId);
+
+    const actualizada = await this.ventaRepository.update(venta.id, fincaId, {
+      estadoAprobacion: EstadoAprobacion.APROBADO,
+      tipoAprobacion: TipoAprobacion.DIRECTA,
+      autoAprobado: false,
+      aprobadoPor,
+    });
+    return VentaResponse.build(actualizada!);
+  }
+
+  async rechazar(
+    id: string,
+    fincaId: string,
+    rechazadoPor: string,
+    motivo?: string,
+  ): Promise<VentaResponse> {
+    const venta = await this.obtenerPendiente(id, fincaId);
+
+    const actualizada = await this.ventaRepository.update(venta.id, fincaId, {
+      estadoAprobacion: EstadoAprobacion.RECHAZADO,
+      motivoRechazo: motivo ?? null,
+      aprobadoPor: rechazadoPor,
+    });
+    return VentaResponse.build(actualizada!);
+  }
+
+  // La resolución manual solo aplica sobre pendientes. Se corren primero los
+  // vencimientos por tiempo: si el plazo ya venció, la venta quedó
+  // auto-aprobada (permanente) y el intento manual responde 409.
+  private async obtenerPendiente(id: string, fincaId: string) {
+    await this.aplicarVencimientos(fincaId);
+
+    const venta = await this.ventaRepository.findById(id, fincaId);
+    if (!venta) {
+      throw new NotFoundException('Venta no encontrada');
+    }
+    if (venta.estadoAprobacion !== EstadoAprobacion.PENDIENTE) {
+      throw new ConflictException(
+        `La venta ya está ${venta.estadoAprobacion}`,
+      );
+    }
+    return venta;
+  }
+}
