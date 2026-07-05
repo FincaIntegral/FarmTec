@@ -17,7 +17,7 @@ export class ListarAnimalesQueryDto extends PaginacionQueryDto {
   @IsEnum(CategoriaAnimal)
   categoria?: CategoriaAnimal;
 
-  // No se aplica todavía — depende de movimiento_ganado (PotreroModule).
+  // Animales cuyo último movimiento terminó en este potrero
   @IsOptional()
   @IsUUID()
   potreroId?: string;

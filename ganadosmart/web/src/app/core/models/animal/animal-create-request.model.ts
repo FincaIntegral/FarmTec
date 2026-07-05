@@ -1,16 +1,13 @@
-﻿import { CategoriaAnimal, EstadoAnimal, SexoAnimal } from '../domain-types';
+import { CategoriaAnimal, SexoAnimal } from '../domain-types';
 
+// Refleja CrearAnimalDto exacto — sin fincaId (nunca del cliente, va del JWT)
+// ni campos que el backend no acepta en este endpoint (estado, valorComercial*, fotoUrl).
 export interface AnimalCreateRequestModel {
-  fincaId: string;
-  madreId?: string;
-  padreId?: string;
-  identificador: string;
+  codigo: string;
   categoria: CategoriaAnimal;
   sexo: SexoAnimal;
   fechaNacimiento?: string;
   raza?: string;
-  valorComercialEstimado?: number;
-  valorComercialAjustado?: number;
-  fotoUrl?: string;
-  estado?: EstadoAnimal;
+  madreId?: string;
+  padreId?: string;
 }

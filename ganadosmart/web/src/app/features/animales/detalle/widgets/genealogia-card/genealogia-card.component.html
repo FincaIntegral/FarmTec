@@ -1,0 +1,25 @@
+<app-card class="p-4">
+  <app-section-header title="Genealogía" />
+  <div class="space-y-2">
+    <div class="flex items-center justify-between text-[11px]">
+      <span class="text-muted-foreground font-heading">Madre</span>
+      @if (madreId() && codigoMadre()) {
+        <a [routerLink]="['/animales', madreId()]" class="font-black text-amber-600 dark:text-amber-400 hover:underline font-mono">
+          {{ codigoMadre() }}
+        </a>
+      } @else {
+        <span class="text-foreground font-bold">No registrada</span>
+      }
+    </div>
+    <div class="flex items-center justify-between text-[11px]">
+      <span class="text-muted-foreground font-heading">Padre</span>
+      @if (padreId() && codigoPadre()) {
+        <a [routerLink]="['/animales', padreId()]" class="font-black text-amber-600 dark:text-amber-400 hover:underline font-mono">
+          {{ codigoPadre() }}
+        </a>
+      } @else {
+        <span class="text-foreground font-bold">No registrado</span>
+      }
+    </div>
+  </div>
+</app-card>

@@ -1,8 +1,16 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AlertaModule } from './modules/alerta/alerta.module';
 import { AnimalModule } from './modules/animal/animal.module';
+import { ConfiguracionModule } from './modules/configuracion/configuracion.module';
+import { GastoModule } from './modules/gasto/gasto.module';
+import { PotreroModule } from './modules/potrero/potrero.module';
+import { ReporteModule } from './modules/reporte/reporte.module';
+import { ReproduccionModule } from './modules/reproduccion/reproduccion.module';
 import { UsuarioModule } from './modules/usuario/usuario.module';
+import { VentaModule } from './modules/venta/venta.module';
+import { HealthController } from './shared/health.controller';
 
 @Module({
   imports: [
@@ -21,6 +29,14 @@ import { UsuarioModule } from './modules/usuario/usuario.module';
     }),
     UsuarioModule,
     AnimalModule,
+    ConfiguracionModule,
+    ReproduccionModule,
+    PotreroModule,
+    VentaModule,
+    GastoModule,
+    ReporteModule,
+    AlertaModule,
   ],
+  controllers: [HealthController],
 })
 export class AppModule {}

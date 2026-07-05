@@ -53,15 +53,3 @@ export const apiEndpoints = {
     RESOLVER_CONFLICTO: '/sincronizacion/resolver-conflicto',
   },
 } as const;
-
-type ApiEndpoints = typeof apiEndpoints;
-
-export type ApiEndpointKeys = {
-  [Section in keyof ApiEndpoints]: {
-    [Action in keyof ApiEndpoints[Section]]: ApiEndpoints[Section][Action] extends (...args: any[]) => string
-      ? string
-      : ApiEndpoints[Section][Action];
-  };
-};
-
-export const apiEndpointKeys: ApiEndpointKeys = apiEndpoints;

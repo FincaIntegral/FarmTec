@@ -1,0 +1,198 @@
+<div class="space-y-4">
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div>
+      <h1 class="text-xl font-black text-foreground font-heading">Gestión de Animales</h1>
+      <p class="text-xs text-muted-foreground mt-0.5">{{ totalRegistros() }} animales registrados</p>
+    </div>
+    @if (puedeCrear()) {
+      <button
+        (click)="abrirModalCrear()"
+        class="flex items-center gap-1.5 text-xs font-black bg-amber-600 hover:bg-amber-500 text-white rounded-lg px-3 py-2 transition-all font-heading w-fit"
+      >
+        <svg lucidePlus [size]="11"></svg>Nuevo animal
+      </button>
+    }
+  </div>
+
+  <app-card class="p-4">
+    <div class="flex flex-col sm:flex-row gap-3 mb-4">
+      <div class="relative flex-1">
+        <svg lucideSearch [size]="13" class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"></svg>
+        <input
+          [value]="busqueda()"
+          (input)="onBuscar($any($event.target).value)"
+          placeholder="Buscar por código o raza..."
+          class="w-full bg-muted border border-border rounded-xl pl-8 pr-3 py-2 text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/20 font-heading"
+        />
+      </div>
+      <div class="flex gap-1.5">
+        @for (f of filtrosSexo; track f) {
+          <button
+            (click)="onFiltroSexo(f)"
+            class="text-xs px-3 py-1.5 rounded-lg font-bold transition-all font-heading"
+            [class.bg-amber-600]="filtroSexo() === f"
+            [class.text-white]="filtroSexo() === f"
+            [class.bg-muted]="filtroSexo() !== f"
+            [class.border]="filtroSexo() !== f"
+            [class.border-border]="filtroSexo() !== f"
+            [class.text-muted-foreground]="filtroSexo() !== f"
+          >
+            {{ f }}
+          </button>
+        }
+      </div>
+    </div>
+
+    @if (error()) {
+      <p class="text-xs text-red-500 font-bold mb-3">{{ error() }}</p>
+    }
+
+    @if (cargando()) {
+      <p class="text-xs text-muted-foreground py-8 text-center">Cargando animales…</p>
+    } @else if (animales().length === 0) {
+      <p class="text-xs text-muted-foreground py-8 text-center">No hay animales que coincidan con la búsqueda.</p>
+    } @else {
+      <div class="overflow-x-auto -mx-1">
+        <table class="w-full text-xs min-w-[720px]">
+          <thead>
+            <tr class="border-b border-border">
+              @for (h of ['Código', 'Categoría', 'Sexo', 'Raza', 'Peso', 'Estado', '']; track h) {
+                <th class="text-left text-[10px] font-black text-muted-foreground uppercase tracking-wider py-2.5 px-2 first:pl-0 last:pr-0 whitespace-nowrap font-heading">
+                  {{ h }}
+                </th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (a of animales(); track a.id; let idx = $index) {
+              <tr
+                class="border-b border-border/40 hover:bg-muted/50 transition-all cursor-pointer"
+                [class.bg-muted/20]="idx % 2 !== 0"
+                (click)="verDetalle(a.id)"
+              >
+                <td class="py-2.5 px-2 first:pl-0">
+                  <div class="flex items-center gap-1.5">
+                    <span class="font-black text-foreground font-mono">{{ a.codigo }}</span>
+                    @if (a.enGestacion) {
+                      <svg lucideHeart [size]="10" fill="currentColor" class="text-purple-500 flex-shrink-0" title="En gestación"></svg>
+                    }
+                  </div>
+                </td>
+                <td class="py-2.5 px-2 text-muted-foreground font-semibold capitalize">{{ a.categoria }}</td>
+                <td class="py-2.5 px-2">
+                  <app-badge [label]="a.sexo === 'hembra' ? 'Hembra' : 'Macho'" [variant]="a.sexo === 'hembra' ? 'purple' : 'sky'" />
+                </td>
+                <td class="py-2.5 px-2 text-muted-foreground font-semibold">{{ a.raza ?? '—' }}</td>
+                <td class="py-2.5 px-2">
+                  <span class="font-black text-foreground font-mono">{{ a.pesoActual !== null ? a.pesoActual + ' kg' : '—' }}</span>
+                </td>
+                <td class="py-2.5 px-2">
+                  <app-badge [label]="a.estado" [variant]="estadoVariant(a.estado)" />
+                </td>
+                <td class="py-2.5 px-2 last:pr-0 text-right">
+                  <span class="text-amber-600 dark:text-amber-400 text-[10px] font-bold">Ver ficha →</span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="mt-4 pt-4 border-t border-border flex items-center justify-between">
+        <span class="text-[10px] text-muted-foreground">{{ totalRegistros() }} animales encontrados</span>
+        @if (totalPaginas() > 1) {
+          <div class="flex items-center gap-2">
+            <button
+              (click)="irAPagina(pagina() - 1)"
+              [disabled]="pagina() <= 1"
+              class="text-[10px] font-bold text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+            >
+              Anterior
+            </button>
+            <span class="text-[10px] text-muted-foreground font-mono">{{ pagina() }} / {{ totalPaginas() }}</span>
+            <button
+              (click)="irAPagina(pagina() + 1)"
+              [disabled]="pagina() >= totalPaginas()"
+              class="text-[10px] font-bold text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+            >
+              Siguiente
+            </button>
+          </div>
+        }
+      </div>
+    }
+  </app-card>
+</div>
+
+@if (mostrarModalCrear()) {
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" (click)="cerrarModalCrear()">
+    <div class="bg-card border border-border rounded-xl p-5 w-full max-w-sm" (click)="$event.stopPropagation()">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-sm font-black text-foreground font-heading">Nuevo animal</h3>
+        <button (click)="cerrarModalCrear()" class="text-muted-foreground hover:text-foreground">
+          <svg lucideX [size]="16"></svg>
+        </button>
+      </div>
+
+      <form [formGroup]="formCrear" (ngSubmit)="crearAnimal()" class="space-y-3">
+        <div>
+          <label class="block text-[10px] font-black text-muted-foreground mb-1 uppercase tracking-wider font-heading">Código *</label>
+          <input
+            formControlName="codigo"
+            class="w-full bg-muted border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none focus:border-amber-500/60"
+          />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[10px] font-black text-muted-foreground mb-1 uppercase tracking-wider font-heading">Categoría *</label>
+            <select
+              formControlName="categoria"
+              class="w-full bg-muted border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none focus:border-amber-500/60"
+            >
+              <option value="vaca">Vaca</option>
+              <option value="toro">Toro</option>
+              <option value="becerro">Becerro</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[10px] font-black text-muted-foreground mb-1 uppercase tracking-wider font-heading">Sexo *</label>
+            <select
+              formControlName="sexo"
+              class="w-full bg-muted border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none focus:border-amber-500/60"
+            >
+              <option value="hembra">Hembra</option>
+              <option value="macho">Macho</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="block text-[10px] font-black text-muted-foreground mb-1 uppercase tracking-wider font-heading">Raza</label>
+          <input
+            formControlName="raza"
+            class="w-full bg-muted border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none focus:border-amber-500/60"
+          />
+        </div>
+        <div>
+          <label class="block text-[10px] font-black text-muted-foreground mb-1 uppercase tracking-wider font-heading">Fecha de nacimiento</label>
+          <input
+            type="date"
+            formControlName="fechaNacimiento"
+            class="w-full bg-muted border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none focus:border-amber-500/60"
+          />
+        </div>
+
+        @if (errorCrear()) {
+          <p class="text-xs text-red-500 font-bold">{{ errorCrear() }}</p>
+        }
+
+        <button
+          type="submit"
+          [disabled]="creando()"
+          class="w-full bg-amber-600 hover:bg-amber-500 disabled:opacity-60 text-white font-black py-2.5 rounded-lg text-xs transition-all mt-2 font-heading"
+        >
+          {{ creando() ? 'Creando…' : 'Crear animal' }}
+        </button>
+      </form>
+    </div>
+  </div>
+}

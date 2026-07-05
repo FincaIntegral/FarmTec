@@ -1,13 +1,12 @@
-﻿import { CategoriaAnimal, EstadoAnimal, SexoAnimal } from '../domain-types';
+import { CategoriaAnimal, EstadoAnimal, SexoAnimal } from '../domain-types';
 
+// Refleja los query params reales de GET /animales.
 export interface AnimalFilterModel {
-  search?: string;
-  id?: string;
-  fincaId?: string;
-  madreId?: string;
-  padreId?: string;
-  identificador?: string;
-  categoria?: CategoriaAnimal;
-  sexo?: SexoAnimal;
   estado?: EstadoAnimal;
+  sexo?: SexoAnimal;
+  categoria?: CategoriaAnimal;
+  potreroId?: string;
+  buscar?: string;
+  pagina?: number;
+  limite?: number;
 }

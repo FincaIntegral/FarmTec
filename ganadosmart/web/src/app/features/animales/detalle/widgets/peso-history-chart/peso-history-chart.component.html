@@ -1,0 +1,21 @@
+@if (historial().length === 0) {
+  <p class="text-xs text-muted-foreground py-8 text-center">Sin registros de peso todavía.</p>
+} @else if (historial().length === 1) {
+  <p class="text-xs text-muted-foreground py-8 text-center">
+    Un solo registro ({{ historial()[0].pesoKg }} kg el {{ historial()[0].fecha }}) — se necesita más de uno para
+    graficar la tendencia.
+  </p>
+} @else {
+  <svg [attr.viewBox]="viewBox" class="w-full" style="height: 170px">
+    <line x1="24" [attr.y1]="lineaMediaY" x2="576" [attr.y2]="lineaMediaY" stroke="rgba(180,100,30,0.10)" stroke-dasharray="3 3" />
+    <path [attr.d]="lineaPath()" fill="none" stroke="#D97706" stroke-width="2" />
+    @for (p of puntosSvg(); track p.fecha) {
+      <circle [attr.cx]="p.x" [attr.cy]="p.y" r="3" fill="#D97706" />
+    }
+  </svg>
+  <div class="flex justify-between mt-1">
+    @for (p of puntosSvg(); track p.fecha) {
+      <span class="text-[9px] text-muted-foreground font-mono">{{ p.fecha }}</span>
+    }
+  </div>
+}

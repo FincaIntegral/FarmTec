@@ -1,0 +1,98 @@
+<aside
+  class="flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-200 flex-shrink-0 overflow-hidden relative"
+  [style.width.px]="collapsed() ? 56 : 224"
+>
+  <div class="flex items-center gap-2.5 px-3 h-[56px] border-b border-sidebar-border flex-shrink-0">
+    <div class="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/35 flex items-center justify-center flex-shrink-0">
+      <svg lucideBeef [size]="17" class="text-amber-600 dark:text-amber-500"></svg>
+    </div>
+    @if (!collapsed()) {
+      <div class="overflow-hidden">
+        <div class="text-sm font-black text-foreground whitespace-nowrap font-heading">GanadoSmart</div>
+        <div class="text-[9px] text-amber-700 dark:text-amber-500 font-bold whitespace-nowrap font-mono">El Paraíso</div>
+      </div>
+    }
+  </div>
+
+  <nav class="flex-1 py-2 overflow-y-auto overflow-x-hidden" style="scrollbar-width: none">
+    @for (item of navItems(); track item.path) {
+      <a
+        [routerLink]="['/', item.path]"
+        routerLinkActive="bg-sidebar-accent text-amber-700 dark:text-amber-400"
+        #rla="routerLinkActive"
+        [title]="collapsed() ? item.label : undefined"
+        class="w-full flex items-center gap-2.5 px-3 py-2.5 text-left transition-all group relative cursor-pointer"
+        [class.text-sidebar-foreground]="!rla.isActive"
+        [class.hover:bg-sidebar-accent]="!rla.isActive"
+        [class.hover:text-foreground]="!rla.isActive"
+      >
+        @if (rla.isActive) {
+          <span class="absolute left-0 top-2 bottom-2 w-1 bg-amber-500 rounded-r-full"></span>
+        }
+        <svg
+          [lucideIcon]="item.icon"
+          [size]="15"
+          class="flex-shrink-0"
+          [class.text-amber-600]="rla.isActive"
+          [class.dark:text-amber-400]="rla.isActive"
+          [class.text-muted-foreground]="!rla.isActive"
+          [class.group-hover:text-foreground]="!rla.isActive"
+        ></svg>
+        @if (!collapsed()) {
+          <span
+            class="text-xs whitespace-nowrap overflow-hidden text-ellipsis flex-1 font-heading"
+            [class.font-black]="rla.isActive"
+            [class.font-semibold]="!rla.isActive"
+          >{{ item.label }}</span>
+        }
+      </a>
+    }
+
+    <div class="relative group">
+      <div class="w-full flex items-center gap-2.5 px-3 py-2.5 cursor-not-allowed opacity-35">
+        <svg lucideLock [size]="15" class="flex-shrink-0 text-muted-foreground"></svg>
+        @if (!collapsed()) {
+          <span class="text-xs font-bold text-muted-foreground flex-1 whitespace-nowrap font-heading">Seguridad</span>
+          <svg lucideLock [size]="10" class="text-muted-foreground flex-shrink-0"></svg>
+        }
+      </div>
+      @if (!collapsed()) {
+        <div class="absolute left-full ml-2 top-1/2 -translate-y-1/2 bg-[#1E1508] border border-[#3D2A10] text-[10px] text-amber-300 px-2.5 py-1.5 rounded-lg whitespace-nowrap z-50 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-xl font-heading">
+          Disponible en Fase 2
+        </div>
+      }
+    </div>
+  </nav>
+
+  <div class="border-t border-sidebar-border p-2 flex-shrink-0">
+    @if (collapsed()) {
+      <button (click)="logout()" class="w-full flex items-center justify-center p-2 rounded-lg hover:bg-sidebar-accent transition-all">
+        <svg lucideLogOut [size]="14" class="text-muted-foreground"></svg>
+      </button>
+    } @else {
+      <div class="flex items-center gap-2 px-1 py-1">
+        <div class="w-8 h-8 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center flex-shrink-0">
+          <span class="text-amber-700 dark:text-amber-400 text-[10px] font-black">{{ iniciales() }}</span>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="text-[11px] font-black text-foreground truncate font-heading">{{ nombre() }}</div>
+          <div class="text-[9px] text-muted-foreground truncate">{{ rolLegible() }}</div>
+        </div>
+        <button (click)="logout()" class="text-muted-foreground hover:text-red-500 transition-colors p-1 flex-shrink-0">
+          <svg lucideLogOut [size]="12"></svg>
+        </button>
+      </div>
+    }
+  </div>
+
+  <button
+    (click)="toggle.emit()"
+    class="absolute bottom-20 -right-3 w-6 h-6 rounded-full bg-card border border-border flex items-center justify-center hover:border-amber-400 transition-all text-muted-foreground hover:text-foreground z-20"
+  >
+    @if (collapsed()) {
+      <svg lucideChevronRight [size]="11"></svg>
+    } @else {
+      <svg lucideChevronLeft [size]="11"></svg>
+    }
+  </button>
+</aside>

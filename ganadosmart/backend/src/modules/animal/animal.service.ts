@@ -9,6 +9,8 @@ import {
   PaginatedResponse,
 } from '../../shared/dto/paginacion-meta.dto';
 import { EstadoAnimal } from '../../shared/enums/estado-animal.enum';
+import { PotreroRepository } from '../potrero/potrero.repository';
+import { ReproduccionRepository } from '../reproduccion/reproduccion.repository';
 import { AnimalRepository, FiltrosAnimal } from './animal.repository';
 import { ActualizarFotoDto } from './dto/actualizar-foto.dto';
 import { AnimalListItemResponse } from './dto/animal-list-item.dto';
@@ -19,14 +21,30 @@ import { RegistrarPesoDto } from './dto/registrar-peso.dto';
 
 @Injectable()
 export class AnimalService {
-  constructor(private readonly animalRepository: AnimalRepository) {}
+  constructor(
+    private readonly animalRepository: AnimalRepository,
+    private readonly reproduccionRepository: ReproduccionRepository,
+    private readonly potreroRepository: PotreroRepository,
+  ) {}
 
   async findAll(
     fincaId: string,
-    filtros: FiltrosAnimal,
+    filtros: FiltrosAnimal & { potreroId?: string },
     pagina: number,
     limite: number,
   ): Promise<PaginatedResponse<AnimalListItemResponse>> {
+    // El potrero actual no es una columna: es el destino del último
+    // movimiento. Se resuelve el filtro a una lista de ids primero.
+    if (filtros.potreroId) {
+      filtros.ids = await this.potreroRepository.animalesEnPotrero(
+        filtros.potreroId,
+        fincaId,
+      );
+      if (filtros.ids.length === 0) {
+        return { datos: [], meta: PaginacionMeta.build(0, pagina, limite) };
+      }
+    }
+
     const [animales, total] = await this.animalRepository.findAllByFinca(
       fincaId,
       filtros,
@@ -34,13 +52,21 @@ export class AnimalService {
       limite,
     );
 
-    const pesos = await this.animalRepository.getPesosActuales(
-      animales.map((a) => a.id),
-    );
+    const ids = animales.map((a) => a.id);
+    const [pesos, enGestacion, potreros] = await Promise.all([
+      this.animalRepository.getPesosActuales(ids),
+      this.reproduccionRepository.vacasEnGestacion(ids),
+      this.potreroRepository.potrerosActuales(ids),
+    ]);
 
     return {
       datos: animales.map((animal) =>
-        AnimalListItemResponse.build(animal, pesos.get(animal.id) ?? null),
+        AnimalListItemResponse.build(
+          animal,
+          pesos.get(animal.id) ?? null,
+          enGestacion.has(animal.id),
+          potreros.get(animal.id) ?? null,
+        ),
       ),
       meta: PaginacionMeta.build(total, pagina, limite),
     };
@@ -52,12 +78,23 @@ export class AnimalService {
       throw new NotFoundException('Animal no encontrado');
     }
 
-    const [pesoActual, historialPeso] = await Promise.all([
-      this.animalRepository.getPesoActual(id),
-      this.animalRepository.getHistorialPeso(id),
-    ]);
+    const [pesoActual, historialPeso, enGestacion, conteo, potreros] =
+      await Promise.all([
+        this.animalRepository.getPesoActual(id),
+        this.animalRepository.getHistorialPeso(id),
+        this.reproduccionRepository.vacasEnGestacion([id]),
+        this.reproduccionRepository.conteoReproduccion(id, fincaId),
+        this.potreroRepository.potrerosActuales([id]),
+      ]);
 
-    return AnimalResponse.buildDetalle(animal, pesoActual, historialPeso);
+    return AnimalResponse.buildDetalle(
+      animal,
+      pesoActual,
+      historialPeso,
+      enGestacion.has(id),
+      conteo,
+      potreros.get(id) ?? null,
+    );
   }
 
   async create(dto: CrearAnimalDto, fincaId: string): Promise<AnimalResponse> {
@@ -89,7 +126,7 @@ export class AnimalService {
 
     await this.validarCodigoYPadres(dto, fincaId, id);
 
-    const animal = await this.animalRepository.update(id, fincaId, {
+    await this.animalRepository.update(id, fincaId, {
       codigo: dto.codigo,
       categoria: dto.categoria,
       sexo: dto.sexo,
@@ -99,12 +136,7 @@ export class AnimalService {
       padreId: dto.padreId,
     });
 
-    const [pesoActual, historialPeso] = await Promise.all([
-      this.animalRepository.getPesoActual(id),
-      this.animalRepository.getHistorialPeso(id),
-    ]);
-
-    return AnimalResponse.buildDetalle(animal!, pesoActual, historialPeso);
+    return this.findOne(id, fincaId);
   }
 
   async registrarPeso(
