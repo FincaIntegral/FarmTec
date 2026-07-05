@@ -34,12 +34,15 @@ Estados posibles: INICIADO · EN_CURSO · COMPLETO · BLOQUEADO · PARCIAL
 
 | 2026-07-05 | gasto | COMPLETO | Sin problemas nuevos: mismo flujo de aprobación que venta, reutilizando evaluarAutoAprobacionPorMonto (shared/utils/aprobacion.util.ts) y el mismo UPDATE perezoso de vencidos (lee aplica_a_gastos). RechazarDto se reutiliza desde venta/dto. Roles: GET/POST dueno+admin, aprobar/rechazar solo dueno (igual que venta). | 4 unit tests verdes (umbral, aplica_a_gastos=false, vencidos, 409 sobre resuelto). |
 
+| 2026-07-05 | reporte | COMPLETO | El contrato no define las fórmulas de los KPIs — decisiones tomadas (revisables por Diego/Juan): 1) "hato" = animales activo+en_tratamiento (muertos/vendidos fuera de conteos, peso promedio y valor). 2) tasaNatalidad = partos exitosos últimos 12 meses / vacas del hato ×100. 3) tasaMortalidad = muertes últimos 12 meses / (hato+esas muertes) ×100. 4) ingresos/gastosMes = SUM de aprobados con fecha del mes calendario actual. 5) porcentajeAutoAprobado = auto_aprobado=true / total transacciones (ventas+gastos) ×100. 6) cambiosEstadoSalud: no existe tabla de eventos de salud — se reporta el nº de animales actualmente en_tratamiento como proxy (inconsistencia anotada abajo). 7) proximosAParto = en_curso con fecha_probable_parto ≤ hoy+30 días. 8) En ingresos-vs-gastos el filtro categoria solo restringe gastos (los ingresos siempre completos); pendientes/rechazadas se listan pero no suman al balance. | Solo lectura, dueno+admin. El dashboard corre los vencimientos por tiempo de ventas y gastos antes de contar pendientes. Agregaciones en SQL directo (FILTER/DISTINCT ON), siempre con finca_id. 2 unit tests verdes. |
+
 ---
 
 ## INCONSISTENCIAS ABIERTAS
 > Problemas entre contrato y schema que aún no tienen decisión.
 
 - **animal.buscar / "nombre"**: contrato dice "busca por codigo, raza o nombre parcial" pero animal (schema.sql) no tiene columna nombre. Implementado sobre codigo+raza. Falta decidir si es error de redacción del contrato o si falta agregar el campo.
+- **cambiosEstadoSalud (dashboard)**: el contrato pide un conteo de "cambios de estado de salud" pero no hay tabla de eventos de salud en schema.sql — hoy se devuelve el nº de animales en_tratamiento. Decidir si se agrega tabla de eventos o se cambia el contrato.
 - **venta aprobada → ¿animal 'vendido'?**: el enum estado_animal tiene 'vendido' pero ni contrato ni CLAUDE.md dicen cuándo se marca. Hoy nada lo setea. Decidir: ¿al aprobarse una venta con animalId se cambia el estado del animal (y en la misma transacción)? Pendiente de Diego/Juan.
 - ~~**AnimalResponse.potreroActualId / enGestacion / conteoReproduccion**~~: resueltos el 2026-07-04 (ReproduccionModule y PotreroModule conectados a animal).
 - ~~**GET /animales?potreroId=**~~: resuelto el 2026-07-04 — filtra por animales cuyo último movimiento terminó en ese potrero.

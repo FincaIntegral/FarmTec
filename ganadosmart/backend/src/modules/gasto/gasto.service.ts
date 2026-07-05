@@ -22,7 +22,8 @@ export class GastoService {
     private readonly configuracionService: ConfiguracionService,
   ) {}
 
-  private async aplicarVencimientos(fincaId: string): Promise<void> {
+  // Público: Reportes también lo corre antes de contar pendientes.
+  async aplicarVencimientos(fincaId: string): Promise<void> {
     const config = await this.configuracionService.obtenerOCrear(fincaId);
     if (config.aplicaAGastos && config.diasEsperaAprobacion !== null) {
       await this.gastoRepository.autoAprobarVencidos(

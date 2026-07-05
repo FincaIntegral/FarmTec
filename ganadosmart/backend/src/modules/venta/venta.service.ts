@@ -24,7 +24,8 @@ export class VentaService {
   ) {}
 
   // Aplica la auto-aprobación por tiempo pendiente antes de leer o resolver.
-  private async aplicarVencimientos(fincaId: string): Promise<void> {
+  // Público: Reportes también lo corre antes de contar pendientes.
+  async aplicarVencimientos(fincaId: string): Promise<void> {
     const config = await this.configuracionService.obtenerOCrear(fincaId);
     if (config.aplicaAVentas && config.diasEsperaAprobacion !== null) {
       await this.ventaRepository.autoAprobarVencidas(
