@@ -8,6 +8,7 @@ import {
   PaginacionMeta,
   PaginatedResponse,
 } from '../../shared/dto/paginacion-meta.dto';
+import { EstadoAnimal } from '../../shared/enums/estado-animal.enum';
 import { EstadoAprobacion } from '../../shared/enums/estado-aprobacion.enum';
 import { TipoAprobacion } from '../../shared/enums/tipo-aprobacion.enum';
 import { TipoOrigenAlerta } from '../../shared/enums/tipo-origen-alerta.enum';
@@ -63,13 +64,25 @@ export class VentaService {
     fincaId: string,
     creadoPor: string,
   ): Promise<VentaResponse> {
-    if (
-      dto.animalId &&
-      !(await this.ventaRepository.findAnimalById(dto.animalId, fincaId))
-    ) {
-      throw new BadRequestException(
-        'animalId no corresponde a un animal de esta finca',
+    if (dto.animalId) {
+      const animal = await this.ventaRepository.findAnimalById(
+        dto.animalId,
+        fincaId,
       );
+      if (!animal) {
+        throw new BadRequestException(
+          'animalId no corresponde a un animal de esta finca',
+        );
+      }
+      // vendido y muerto son estados terminales — no se venden dos veces
+      if (
+        animal.estado === EstadoAnimal.VENDIDO ||
+        animal.estado === EstadoAnimal.MUERTO
+      ) {
+        throw new BadRequestException(
+          `El animal ${animal.codigo} está ${animal.estado}`,
+        );
+      }
     }
 
     const config = await this.configuracionService.obtenerOCrear(fincaId);
@@ -107,7 +120,8 @@ export class VentaService {
   ): Promise<VentaResponse> {
     const venta = await this.obtenerPendiente(id, fincaId);
 
-    const actualizada = await this.ventaRepository.update(venta.id, fincaId, {
+    // Transacción: aprueba la venta y marca el animal como vendido si aplica
+    const actualizada = await this.ventaRepository.aprobarVenta(venta, {
       estadoAprobacion: EstadoAprobacion.APROBADO,
       tipoAprobacion: TipoAprobacion.DIRECTA,
       autoAprobado: false,

@@ -40,15 +40,17 @@ Estados posibles: INICIADO · EN_CURSO · COMPLETO · BLOQUEADO · PARCIAL
 
 | 2026-07-05 | deploy | EN_CURSO | 1) develop ya tenía fly.toml (app=farmtec, región gru) y Dockerfile de un deploy previo — se mergeó origin/develop a la feature branch. 2) El merge de main.ts vino con sintaxis rota (void bootstrap() dentro de la función) — corregido. 3) fly.toml exige health check GET /api/v1/health que no existía — se agregó HealthController @Public() como infraestructura (no es endpoint de negocio del contrato). 4) Se agregó .dockerignore (no existía: la imagen copiaba node_modules y .env). | Deploy vía GitHub Actions al push a develop (FLY_API_TOKEN en secrets). Ruta: push de feature/setup-monorepo + PR a develop. Los secrets DATABASE_URL/JWT_SECRET deben existir en la app farmtec de Fly (hubo un deploy exitoso el 2026-07-04, se asume que están). |
 
+| 2026-07-05 | venta+animal+alerta (decisiones de negocio) | COMPLETO | Diego resolvió las 3 decisiones abiertas: 1) venta aprobada con animalId SÍ marca el animal como 'vendido' — implementado en las 3 rutas de aprobación (por_monto al crear, directa al aprobar, por_tiempo en el UPDATE perezoso con RETURNING animal_id), siempre venta+animal en la misma transacción; 'vendido' solo desde estados vivos (nunca pisa 'muerto') y es terminal; vender un animal ya vendido/muerto → 400. 2) Alertas de origen 'animal': solo mortalidad registrada (severidad alta) para el piloto — capacidad de potrero superada es Fase 2. 3) cambiosEstadoSalud del dashboard: el proxy "animales actualmente en_tratamiento" queda como DECISIÓN TEMPORAL del piloto — revisar si se agrega tabla de eventos de salud en Fase 2. | 36 unit tests verdes (3 nuevos: animal vendido/muerto no se vende dos veces, aprobar pasa por la ruta transaccional, mortalidad genera alerta y no duplica sobre muertos). |
+
 ---
 
 ## INCONSISTENCIAS ABIERTAS
 > Problemas entre contrato y schema que aún no tienen decisión.
 
 - **animal.buscar / "nombre"**: contrato dice "busca por codigo, raza o nombre parcial" pero animal (schema.sql) no tiene columna nombre. Implementado sobre codigo+raza. Falta decidir si es error de redacción del contrato o si falta agregar el campo.
-- **alertas de origen 'animal'**: el enum tipo_origen_alerta incluye 'animal' pero no está definido qué eventos animales generan alerta (¿mortalidad?, ¿capacidad de potrero superada? — el schema dice "el sistema avisa si se supera"). Hoy solo se generan alertas de venta/gasto pendiente. Pendiente de Diego/Juan.
-- **cambiosEstadoSalud (dashboard)**: el contrato pide un conteo de "cambios de estado de salud" pero no hay tabla de eventos de salud en schema.sql — hoy se devuelve el nº de animales en_tratamiento. Decidir si se agrega tabla de eventos o se cambia el contrato.
-- **venta aprobada → ¿animal 'vendido'?**: el enum estado_animal tiene 'vendido' pero ni contrato ni CLAUDE.md dicen cuándo se marca. Hoy nada lo setea. Decidir: ¿al aprobarse una venta con animalId se cambia el estado del animal (y en la misma transacción)? Pendiente de Diego/Juan.
+- ~~**alertas de origen 'animal'**~~: resuelto 2026-07-05 — solo mortalidad para el piloto (capacidad de potrero = Fase 2).
+- ~~**cambiosEstadoSalud (dashboard)**~~: resuelto 2026-07-05 — proxy de animales en_tratamiento aceptado como decisión temporal del piloto.
+- ~~**venta aprobada → ¿animal 'vendido'?**~~: resuelto 2026-07-05 — sí, en la misma transacción, en las 3 rutas de aprobación; estado terminal.
 - ~~**AnimalResponse.potreroActualId / enGestacion / conteoReproduccion**~~: resueltos el 2026-07-04 (ReproduccionModule y PotreroModule conectados a animal).
 - ~~**GET /animales?potreroId=**~~: resuelto el 2026-07-04 — filtra por animales cuyo último movimiento terminó en ese potrero.
 

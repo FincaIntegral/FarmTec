@@ -9,6 +9,9 @@ import {
   PaginatedResponse,
 } from '../../shared/dto/paginacion-meta.dto';
 import { EstadoAnimal } from '../../shared/enums/estado-animal.enum';
+import { SeveridadAlerta } from '../../shared/enums/severidad-alerta.enum';
+import { TipoOrigenAlerta } from '../../shared/enums/tipo-origen-alerta.enum';
+import { AlertaService } from '../alerta/alerta.service';
 import { PotreroRepository } from '../potrero/potrero.repository';
 import { ReproduccionRepository } from '../reproduccion/reproduccion.repository';
 import { AnimalRepository, FiltrosAnimal } from './animal.repository';
@@ -25,6 +28,7 @@ export class AnimalService {
     private readonly animalRepository: AnimalRepository,
     private readonly reproduccionRepository: ReproduccionRepository,
     private readonly potreroRepository: PotreroRepository,
+    private readonly alertaService: AlertaService,
   ) {}
 
   async findAll(
@@ -180,6 +184,16 @@ export class AnimalService {
       causa: dto.causa,
       registradoPor,
     });
+
+    // Única alerta de origen 'animal' del piloto (decisión 2026-07-05);
+    // capacidad de potrero superada queda para Fase 2
+    await this.alertaService.crear(
+      fincaId,
+      id,
+      TipoOrigenAlerta.ANIMAL,
+      `Mortalidad registrada: ${animal.codigo} — ${dto.causa}`,
+      SeveridadAlerta.ALTA,
+    );
   }
 
   async actualizarFoto(

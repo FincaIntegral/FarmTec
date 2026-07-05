@@ -1,9 +1,11 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
+import { EstadoAnimal } from '../../shared/enums/estado-animal.enum';
 import { EstadoAprobacion } from '../../shared/enums/estado-aprobacion.enum';
 import { TipoAprobacion } from '../../shared/enums/tipo-aprobacion.enum';
 import { AlertaService } from '../alerta/alerta.service';
 import { ConfiguracionService } from '../configuracion/configuracion.service';
 import { ConfiguracionAprobacion } from '../configuracion/entities/configuracion-aprobacion.entity';
+import { Animal } from '../animal/entities/animal.entity';
 import { Venta } from './entities/venta.entity';
 import { VentaRepository } from './venta.repository';
 import { VentaService } from './venta.service';
@@ -34,6 +36,9 @@ describe('VentaService', () => {
       create: jest.fn((data) => Promise.resolve({ id: 'venta-1', ...data } as Venta)),
       update: jest.fn((id, _f, data) =>
         Promise.resolve({ id, fincaId: FINCA, ...data } as Venta),
+      ),
+      aprobarVenta: jest.fn((venta: Venta, data: Partial<Venta>) =>
+        Promise.resolve({ ...venta, ...data } as Venta),
       ),
       autoAprobarVencidas: jest.fn(),
     } as unknown as jest.Mocked<VentaRepository>;
@@ -93,6 +98,18 @@ describe('VentaService', () => {
         service.create({ ...dtoBase, animalId: 'ajeno' }, FINCA, 'u'),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
+
+    it('animal ya vendido o muerto → 400 (no se vende dos veces)', async () => {
+      repo.findAnimalById.mockResolvedValue({
+        id: 'animal-1',
+        codigo: 'VACA-001',
+        estado: EstadoAnimal.VENDIDO,
+      } as Animal);
+      await expect(
+        service.create({ ...dtoBase, animalId: 'animal-1' }, FINCA, 'u'),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(repo.create).not.toHaveBeenCalled();
+    });
   });
 
   describe('vencimientos por tiempo (evaluación perezosa)', () => {
@@ -130,6 +147,11 @@ describe('VentaService', () => {
       expect(venta.aprobadoPor).toBe('dueno-1');
       // se evaluó el vencimiento por tiempo ANTES de resolver manualmente
       expect(repo.autoAprobarVencidas).toHaveBeenCalled();
+      // la aprobación pasa por la ruta transaccional que vende el animal
+      expect(repo.aprobarVenta).toHaveBeenCalledWith(
+        pendiente,
+        expect.objectContaining({ tipoAprobacion: TipoAprobacion.DIRECTA }),
+      );
     });
 
     it('aprobar una ya resuelta (p.ej. auto-aprobada por tiempo) → 409', async () => {
@@ -143,7 +165,7 @@ describe('VentaService', () => {
         ConflictException,
       );
       // nunca se intenta revertir auto_aprobado
-      expect(repo.update).not.toHaveBeenCalled();
+      expect(repo.aprobarVenta).not.toHaveBeenCalled();
     });
 
     it('rechazar guarda el motivo', async () => {
