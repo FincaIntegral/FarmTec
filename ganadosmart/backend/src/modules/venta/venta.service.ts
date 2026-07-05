@@ -10,7 +10,9 @@ import {
 } from '../../shared/dto/paginacion-meta.dto';
 import { EstadoAprobacion } from '../../shared/enums/estado-aprobacion.enum';
 import { TipoAprobacion } from '../../shared/enums/tipo-aprobacion.enum';
+import { TipoOrigenAlerta } from '../../shared/enums/tipo-origen-alerta.enum';
 import { evaluarAutoAprobacionPorMonto } from '../../shared/utils/aprobacion.util';
+import { AlertaService } from '../alerta/alerta.service';
 import { ConfiguracionService } from '../configuracion/configuracion.service';
 import { CrearVentaDto } from './dto/create-venta.dto';
 import { VentaResponse } from './dto/venta-response.dto';
@@ -21,6 +23,7 @@ export class VentaService {
   constructor(
     private readonly ventaRepository: VentaRepository,
     private readonly configuracionService: ConfiguracionService,
+    private readonly alertaService: AlertaService,
   ) {}
 
   // Aplica la auto-aprobación por tiempo pendiente antes de leer o resolver.
@@ -85,6 +88,15 @@ export class VentaService {
       creadoPor,
       ...aprobacion,
     });
+
+    if (venta.estadoAprobacion === EstadoAprobacion.PENDIENTE) {
+      await this.alertaService.crear(
+        fincaId,
+        venta.id,
+        TipoOrigenAlerta.VENTA,
+        `Venta a ${venta.comprador} por ${venta.monto} pendiente de aprobación`,
+      );
+    }
     return VentaResponse.build(venta);
   }
 

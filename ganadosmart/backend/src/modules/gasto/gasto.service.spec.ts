@@ -2,6 +2,7 @@ import { ConflictException } from '@nestjs/common';
 import { CategoriaGasto } from '../../shared/enums/categoria-gasto.enum';
 import { EstadoAprobacion } from '../../shared/enums/estado-aprobacion.enum';
 import { TipoAprobacion } from '../../shared/enums/tipo-aprobacion.enum';
+import { AlertaService } from '../alerta/alerta.service';
 import { ConfiguracionService } from '../configuracion/configuracion.service';
 import { ConfiguracionAprobacion } from '../configuracion/entities/configuracion-aprobacion.entity';
 import { Gasto } from './entities/gasto.entity';
@@ -42,7 +43,11 @@ describe('GastoService', () => {
     configService = {
       obtenerOCrear: jest.fn().mockResolvedValue(configBase),
     } as unknown as jest.Mocked<ConfiguracionService>;
-    service = new GastoService(repo, configService);
+    service = new GastoService(
+      repo,
+      configService,
+      { crear: jest.fn() } as unknown as AlertaService,
+    );
   });
 
   it('monto bajo el umbral → auto-aprobado por_monto', async () => {

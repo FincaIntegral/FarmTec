@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { EstadoAprobacion } from '../../shared/enums/estado-aprobacion.enum';
 import { TipoAprobacion } from '../../shared/enums/tipo-aprobacion.enum';
+import { AlertaService } from '../alerta/alerta.service';
 import { ConfiguracionService } from '../configuracion/configuracion.service';
 import { ConfiguracionAprobacion } from '../configuracion/entities/configuracion-aprobacion.entity';
 import { Venta } from './entities/venta.entity';
@@ -22,6 +23,7 @@ const dtoBase = { comprador: 'Frigorífico X', monto: 100000, fecha: '2026-07-04
 describe('VentaService', () => {
   let repo: jest.Mocked<VentaRepository>;
   let configService: jest.Mocked<ConfiguracionService>;
+  let alertaService: jest.Mocked<AlertaService>;
   let service: VentaService;
 
   beforeEach(() => {
@@ -38,7 +40,8 @@ describe('VentaService', () => {
     configService = {
       obtenerOCrear: jest.fn().mockResolvedValue(configBase),
     } as unknown as jest.Mocked<ConfiguracionService>;
-    service = new VentaService(repo, configService);
+    alertaService = { crear: jest.fn() } as unknown as jest.Mocked<AlertaService>;
+    service = new VentaService(repo, configService, alertaService);
   });
 
   describe('create — auto-aprobación por monto (leída de configuracion)', () => {
@@ -48,9 +51,11 @@ describe('VentaService', () => {
       expect(venta.estadoAprobacion).toBe(EstadoAprobacion.APROBADO);
       expect(venta.tipoAprobacion).toBe(TipoAprobacion.POR_MONTO);
       expect(venta.autoAprobado).toBe(true);
+      // auto-aprobada: el Dueño no tiene nada que resolver, sin alerta
+      expect(alertaService.crear).not.toHaveBeenCalled();
     });
 
-    it('monto igual o sobre el umbral → pendiente', async () => {
+    it('monto igual o sobre el umbral → pendiente + alerta al Dueño', async () => {
       const venta = await service.create(
         { ...dtoBase, monto: 500000 },
         FINCA,
@@ -59,6 +64,7 @@ describe('VentaService', () => {
       expect(venta.estadoAprobacion).toBe(EstadoAprobacion.PENDIENTE);
       expect(venta.tipoAprobacion).toBe(TipoAprobacion.PENDIENTE);
       expect(venta.autoAprobado).toBe(false);
+      expect(alertaService.crear).toHaveBeenCalled();
     });
 
     it('umbral NULL → nunca auto-aprueba por monto', async () => {

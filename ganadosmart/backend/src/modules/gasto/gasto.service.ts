@@ -9,7 +9,9 @@ import {
 } from '../../shared/dto/paginacion-meta.dto';
 import { EstadoAprobacion } from '../../shared/enums/estado-aprobacion.enum';
 import { TipoAprobacion } from '../../shared/enums/tipo-aprobacion.enum';
+import { TipoOrigenAlerta } from '../../shared/enums/tipo-origen-alerta.enum';
 import { evaluarAutoAprobacionPorMonto } from '../../shared/utils/aprobacion.util';
+import { AlertaService } from '../alerta/alerta.service';
 import { ConfiguracionService } from '../configuracion/configuracion.service';
 import { CrearGastoDto } from './dto/create-gasto.dto';
 import { GastoResponse } from './dto/gasto-response.dto';
@@ -20,6 +22,7 @@ export class GastoService {
   constructor(
     private readonly gastoRepository: GastoRepository,
     private readonly configuracionService: ConfiguracionService,
+    private readonly alertaService: AlertaService,
   ) {}
 
   // Público: Reportes también lo corre antes de contar pendientes.
@@ -74,6 +77,15 @@ export class GastoService {
       creadoPor,
       ...aprobacion,
     });
+
+    if (gasto.estadoAprobacion === EstadoAprobacion.PENDIENTE) {
+      await this.alertaService.crear(
+        fincaId,
+        gasto.id,
+        TipoOrigenAlerta.GASTO,
+        `Gasto de ${gasto.categoria} por ${gasto.monto} pendiente de aprobación`,
+      );
+    }
     return GastoResponse.build(gasto);
   }
 
