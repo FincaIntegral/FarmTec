@@ -3,6 +3,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AnimalModule } from './modules/animal/animal.module';
 import { ConfiguracionModule } from './modules/configuracion/configuracion.module';
+import { PotreroModule } from './modules/potrero/potrero.module';
+import { ReproduccionModule } from './modules/reproduccion/reproduccion.module';
 import { UsuarioModule } from './modules/usuario/usuario.module';
 
 @Module({
@@ -23,6 +25,8 @@ import { UsuarioModule } from './modules/usuario/usuario.module';
     UsuarioModule,
     AnimalModule,
     ConfiguracionModule,
+    ReproduccionModule,
+    PotreroModule,
   ],
 })
 export class AppModule {}

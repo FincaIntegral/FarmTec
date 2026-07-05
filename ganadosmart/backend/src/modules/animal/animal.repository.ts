@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, ILike, Repository } from 'typeorm';
+import { DataSource, ILike, In, Repository } from 'typeorm';
 import { CategoriaAnimal } from '../../shared/enums/categoria-animal.enum';
 import { EstadoAnimal } from '../../shared/enums/estado-animal.enum';
 import { SexoAnimal } from '../../shared/enums/sexo-animal.enum';
@@ -13,6 +13,8 @@ export interface FiltrosAnimal {
   sexo?: SexoAnimal;
   categoria?: CategoriaAnimal;
   buscar?: string;
+  // Restringe a estos ids (resuelto por el filtro potreroId en el service)
+  ids?: string[];
 }
 
 @Injectable()
@@ -57,6 +59,7 @@ export class AnimalRepository {
       ...(filtros.estado && { estado: filtros.estado }),
       ...(filtros.sexo && { sexo: filtros.sexo }),
       ...(filtros.categoria && { categoria: filtros.categoria }),
+      ...(filtros.ids && { id: In(filtros.ids) }),
     };
 
     // "buscar" cubre codigo y raza — el contrato menciona "nombre" pero

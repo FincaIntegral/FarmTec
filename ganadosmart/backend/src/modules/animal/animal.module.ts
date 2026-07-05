@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { PotreroModule } from '../potrero/potrero.module';
 import { ReproduccionModule } from '../reproduccion/reproduccion.module';
 import { AnimalController } from './animal.controller';
 import { AnimalRepository } from './animal.repository';
@@ -12,6 +13,7 @@ import { Mortalidad } from './entities/mortalidad.entity';
   imports: [
     TypeOrmModule.forFeature([Animal, HistorialPeso, Mortalidad]),
     ReproduccionModule,
+    PotreroModule,
   ],
   controllers: [AnimalController],
   providers: [AnimalService, AnimalRepository],

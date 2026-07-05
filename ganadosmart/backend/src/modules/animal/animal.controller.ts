@@ -37,12 +37,20 @@ export class AnimalController {
   @Get()
   findAll(
     @Query()
-    { pagina, limite, estado, sexo, categoria, buscar }: ListarAnimalesQueryDto,
+    {
+      pagina,
+      limite,
+      estado,
+      sexo,
+      categoria,
+      buscar,
+      potreroId,
+    }: ListarAnimalesQueryDto,
     @CurrentUser() usuario: JwtPayload,
   ) {
     return this.animalService.findAll(
       usuario.fincaId,
-      { estado, sexo, categoria, buscar },
+      { estado, sexo, categoria, buscar, potreroId },
       pagina,
       limite,
     );

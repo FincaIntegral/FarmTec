@@ -28,14 +28,16 @@ Estados posibles: INICIADO · EN_CURSO · COMPLETO · BLOQUEADO · PARCIAL
 
 | 2026-07-04 | reproduccion | COMPLETO | 1) El contrato no acepta fecha_probable_parto en el POST pero la columna existe y el dashboard usa proximosAParto — se calcula automáticamente como fecha + 283 días (gestación bovina promedio). 2) confirmar-parto no define roles en el contrato — se igualó al POST (dueno+admin+vet). 3) pesoNacimiento del becerro no tiene tabla propia — se registra como primera fila de historial_peso dentro de la misma transacción. 4) Para evitar dependencia circular AnimalModule↔ReproduccionModule, ReproduccionRepository registra las entities Animal/HistorialPeso directamente (forFeature) en vez de importar AnimalModule; regla acordada: cada módulo puede LEER entities ajenas, solo escribe las propias — con la única excepción de la genealogía (reproduccion crea el becerro dentro de su transacción, es el requisito de negocio). | Genealogía en una sola transacción: crear becerro (madre_id=vaca_id, padre_id=toro_id, categoria=becerro), peso de nacimiento opcional, becerro_resultante_id + estado=exitoso. Validaciones POST: toro macho / vaca hembra de la finca, ni muertos ni vendidos, 409 si la vaca tiene evento en_curso (respaldado por el constraint EXCLUDE). Placeholders de animal conectados: enGestacion (batch, sin N+1) y conteoReproduccion reales; queda pendiente solo potreroActualId. 9 unit tests verdes. |
 
+| 2026-07-04 | potrero | COMPLETO | 1) GET /potreros del contrato devuelve array plano sin paginación (a diferencia del resto de listados) — se respetó el contrato tal cual. 2) "potrero actual" de un animal no es columna: se define como potrero_destino_id del último movimiento (fecha DESC, created_at DESC como desempate) — DISTINCT ON en batch para el listado. 3) Roles de POST /potreros/movimientos no definidos en contrato — se dio a dueno+admin+vet (es acción de campo, igual que peso). 4) El filtro potreroId de GET /animales se resuelve primero a lista de ids de animales y luego se pasa al repositorio de animal — el service de animal ahora consume PotreroRepository y ReproduccionRepository. | CRUD potrero (nombre único por finca → 400) + movimientos (origen≠destino → 400, animal y ambos potreros validados contra la finca). Conectados los dos placeholders restantes de animal: potreroActualId y filtro potreroId — no quedan TODOs en el módulo animal. 5 unit tests verdes. |
+
 ---
 
 ## INCONSISTENCIAS ABIERTAS
 > Problemas entre contrato y schema que aún no tienen decisión.
 
 - **animal.buscar / "nombre"**: contrato dice "busca por codigo, raza o nombre parcial" pero animal (schema.sql) no tiene columna nombre. Implementado sobre codigo+raza. Falta decidir si es error de redacción del contrato o si falta agregar el campo.
-- **AnimalResponse.potreroActualId**: ~~enGestacion / conteoReproduccion~~ resueltos el 2026-07-04 con ReproduccionModule. potreroActualId sigue en null hasta que exista PotreroModule.
-- **GET /animales?potreroId=**: aceptado en el DTO de query, no filtra nada todavía (depende de movimiento_ganado / PotreroModule).
+- ~~**AnimalResponse.potreroActualId / enGestacion / conteoReproduccion**~~: resueltos el 2026-07-04 (ReproduccionModule y PotreroModule conectados a animal).
+- ~~**GET /animales?potreroId=**~~: resuelto el 2026-07-04 — filtra por animales cuyo último movimiento terminó en ese potrero.
 
 ---
 
