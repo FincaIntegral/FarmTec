@@ -1,5 +1,6 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Animal } from '../animal/entities/animal.entity';
+import { AlertaService } from '../alerta/alerta.service';
 import { MovimientoGanado } from './entities/movimiento-ganado.entity';
 import { Potrero } from './entities/potrero.entity';
 import { PotreroRepository } from './potrero.repository';
@@ -9,6 +10,7 @@ const FINCA = 'finca-1';
 
 describe('PotreroService', () => {
   let repo: jest.Mocked<PotreroRepository>;
+  let alertaService: jest.Mocked<AlertaService>;
   let service: PotreroService;
 
   beforeEach(() => {
@@ -24,7 +26,8 @@ describe('PotreroService', () => {
       potrerosActuales: jest.fn(),
       animalesEnPotrero: jest.fn(),
     } as unknown as jest.Mocked<PotreroRepository>;
-    service = new PotreroService(repo);
+    alertaService = { crear: jest.fn() } as unknown as jest.Mocked<AlertaService>;
+    service = new PotreroService(repo, alertaService);
   });
 
   it('rechaza crear potrero con nombre duplicado en la finca', async () => {
@@ -70,10 +73,10 @@ describe('PotreroService', () => {
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
-    it('registra el movimiento con finca y usuario del JWT', async () => {
-      repo.findAnimalById.mockResolvedValue({ id: 'animal-1' } as Animal);
+    it('registra el movimiento con finca y usuario del JWT, y notifica al dueño', async () => {
+      repo.findAnimalById.mockResolvedValue({ id: 'animal-1', codigo: 'VACA-001' } as Animal);
       repo.findById.mockImplementation((id) =>
-        Promise.resolve({ id } as Potrero),
+        Promise.resolve({ id, nombre: `Potrero ${id}` } as Potrero),
       );
       repo.createMovimiento.mockImplementation((data) =>
         Promise.resolve({ id: 'mov-1', ...data } as MovimientoGanado),
@@ -85,6 +88,12 @@ describe('PotreroService', () => {
         expect.objectContaining({ fincaId: FINCA, registradoPor: 'user-1' }),
       );
       expect(result.potreroDestinoId).toBe('pot-2');
+      expect(alertaService.crear).toHaveBeenCalledWith(
+        FINCA,
+        'mov-1',
+        'potrero',
+        expect.stringContaining('VACA-001'),
+      );
     });
   });
 });

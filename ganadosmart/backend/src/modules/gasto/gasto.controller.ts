@@ -50,7 +50,7 @@ export class GastoController {
   @Roles(...ROLES_FINANCIEROS)
   @Post()
   create(@Body() dto: CrearGastoDto, @CurrentUser() usuario: JwtPayload) {
-    return this.gastoService.create(dto, usuario.fincaId, usuario.sub);
+    return this.gastoService.create(dto, usuario.fincaId, usuario.sub, usuario.rol);
   }
 
   @Roles(RolUsuario.DUENO_FINCA)

@@ -63,7 +63,8 @@ export class ReporteRepository {
     }>(
       `SELECT COUNT(*) FILTER (WHERE estado = 'exitoso'
                 AND created_at > NOW() - INTERVAL '12 months') AS partos_exitosos_12m,
-              COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '7 days')
+              COUNT(*) FILTER (WHERE tipo = 'inseminacion'
+                AND created_at > NOW() - INTERVAL '7 days')
                 AS inseminaciones_7d,
               COUNT(*) FILTER (WHERE estado = 'en_curso'
                 AND fecha_probable_parto <= CURRENT_DATE + 30) AS proximos_a_parto
@@ -83,11 +84,26 @@ export class ReporteRepository {
     return parseInt(fila.muertes, 10);
   }
 
+  // Total histórico de animales muertos (no solo los últimos 12 meses).
+  async totalMuertos(fincaId: string): Promise<number> {
+    const fila = await this.uno<{ muertos: string }>(
+      `SELECT COUNT(*) AS muertos
+         FROM animal
+        WHERE finca_id = $1 AND estado = 'muerto'`,
+      [fincaId],
+    );
+    return parseInt(fila.muertos, 10);
+  }
+
+  // Solo pesajes de animales que siguen en el hato (activo/en_tratamiento) —
+  // un pesaje de un animal ya muerto o vendido no refleja actividad vigente.
   async pesajes7Dias(fincaId: string): Promise<number> {
     const fila = await this.uno<{ pesajes: string }>(
       `SELECT COUNT(*) AS pesajes
-         FROM historial_peso
-        WHERE finca_id = $1 AND created_at > NOW() - INTERVAL '7 days'`,
+         FROM historial_peso hp
+         JOIN animal a ON a.id = hp.animal_id
+        WHERE hp.finca_id = $1 AND hp.created_at > NOW() - INTERVAL '7 days'
+          AND a.estado IN ('activo', 'en_tratamiento')`,
       [fincaId],
     );
     return parseInt(fila.pesajes, 10);

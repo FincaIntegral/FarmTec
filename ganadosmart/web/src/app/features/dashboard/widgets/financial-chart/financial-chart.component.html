@@ -1,0 +1,31 @@
+<div class="space-y-3">
+  <div>
+    <div class="flex items-center justify-between text-[10px] mb-1">
+      <span class="text-muted-foreground font-heading font-bold">Ingresos</span>
+      <span class="text-emerald-600 dark:text-emerald-400 font-black font-mono">{{ ingresosFormato() }}</span>
+    </div>
+    <div class="w-full h-2 rounded-full bg-muted overflow-hidden">
+      <div class="h-full bg-emerald-500 rounded-full transition-all" [style.width.%]="porcentajeIngresos()"></div>
+    </div>
+  </div>
+  <div>
+    <div class="flex items-center justify-between text-[10px] mb-1">
+      <span class="text-muted-foreground font-heading font-bold">Gastos</span>
+      <span class="text-red-500 font-black font-mono">{{ gastosFormato() }}</span>
+    </div>
+    <div class="w-full h-2 rounded-full bg-muted overflow-hidden">
+      <div class="h-full bg-red-500 rounded-full transition-all" [style.width.%]="porcentajeGastos()"></div>
+    </div>
+  </div>
+  <div class="flex items-center justify-between pt-2 border-t border-border">
+    <span class="text-[10px] text-muted-foreground font-heading font-bold">Balance del mes</span>
+    <span
+      class="text-xs font-black font-mono"
+      [class.text-emerald-600]="balance() >= 0"
+      [class.dark:text-emerald-400]="balance() >= 0"
+      [class.text-red-500]="balance() < 0"
+    >
+      {{ balanceFormato() }}
+    </span>
+  </div>
+</div>

@@ -7,6 +7,8 @@ import {
   PaginacionMeta,
   PaginatedResponse,
 } from '../../shared/dto/paginacion-meta.dto';
+import { TipoOrigenAlerta } from '../../shared/enums/tipo-origen-alerta.enum';
+import { AlertaService } from '../alerta/alerta.service';
 import { CrearMovimientoDto } from './dto/create-movimiento.dto';
 import { CrearPotreroDto } from './dto/create-potrero.dto';
 import {
@@ -17,7 +19,10 @@ import { FiltrosMovimiento, PotreroRepository } from './potrero.repository';
 
 @Injectable()
 export class PotreroService {
-  constructor(private readonly potreroRepository: PotreroRepository) {}
+  constructor(
+    private readonly potreroRepository: PotreroRepository,
+    private readonly alertaService: AlertaService,
+  ) {}
 
   async findAll(fincaId: string): Promise<PotreroResponse[]> {
     const potreros = await this.potreroRepository.findAllByFinca(fincaId);
@@ -106,6 +111,15 @@ export class PotreroService {
       observacion: dto.observacion,
       registradoPor,
     });
+
+    // Solo notifica al dueño — es informativo, no requiere su aprobación.
+    await this.alertaService.crear(
+      fincaId,
+      movimiento.id,
+      TipoOrigenAlerta.POTRERO,
+      `${animal.codigo} se movió de ${origen.nombre} a ${destino.nombre}`,
+    );
+
     return MovimientoResponse.build(movimiento);
   }
 }

@@ -15,7 +15,10 @@ export const apiEndpoints = {
     DETAIL: (id: string): string => `/animales/${id}`,
     REGISTER_WEIGHT: (id: string): string => `/animales/${id}/peso`,
     REGISTER_MORTALIDAD: (id: string): string => `/animales/${id}/mortalidad`,
+    REACTIVAR: (id: string): string => `/animales/${id}/reactivar`,
+    SOLICITAR_REACTIVACION: (id: string): string => `/animales/${id}/solicitar-reactivacion`,
     UPDATE_PHOTO: (id: string): string => `/animales/${id}/foto`,
+    UPLOAD_PHOTO: (id: string): string => `/animales/${id}/foto/upload`,
   },
   REPRODUCCION: {
     LIST: '/reproducciones',

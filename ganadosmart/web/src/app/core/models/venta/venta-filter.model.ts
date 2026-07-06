@@ -1,11 +1,11 @@
-﻿import { EstadoAprobacion, TipoAprobacion } from '../domain-types';
+import { EstadoAprobacion } from '../domain-types';
 
+// Refleja los query params reales de GET /ventas.
 export interface VentaFilterModel {
-  search?: string;
-  id?: string;
-  fincaId?: string;
-  animalId?: string;
-  comprador?: string;
   estadoAprobacion?: EstadoAprobacion;
-  tipoAprobacion?: TipoAprobacion;
+  soloMisAprobaciones?: boolean;
+  fechaInicio?: string;
+  fechaFin?: string;
+  pagina?: number;
+  limite?: number;
 }

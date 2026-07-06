@@ -34,6 +34,7 @@ describe('ReporteService', () => {
         proximos_a_parto: '1',
       }),
       muertes12Meses: jest.fn().mockResolvedValue(1),
+      totalMuertos: jest.fn().mockResolvedValue(3),
       pesajes7Dias: jest.fn().mockResolvedValue(4),
       finanzasMesActual: jest.fn().mockResolvedValue({
         ingresos_mes: '3000000',
@@ -53,6 +54,7 @@ describe('ReporteService', () => {
     expect(ventaService.aplicarVencimientos).toHaveBeenCalledWith(FINCA);
     expect(gastoService.aplicarVencimientos).toHaveBeenCalledWith(FINCA);
     expect(d.totalAnimales).toBe(10);
+    expect(d.animalesMuertos).toBe(3);
     expect(d.balanceMes).toBe(2000000);
     expect(d.tasaNatalidad).toBe(40); // 2 partos / 5 vacas
     expect(d.tasaMortalidad).toBe(9.09); // 1 / (10+1)

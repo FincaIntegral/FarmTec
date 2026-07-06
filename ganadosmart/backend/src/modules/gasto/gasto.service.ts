@@ -8,9 +8,13 @@ import {
   PaginatedResponse,
 } from '../../shared/dto/paginacion-meta.dto';
 import { EstadoAprobacion } from '../../shared/enums/estado-aprobacion.enum';
+import { RolUsuario } from '../../shared/enums/rol-usuario.enum';
 import { TipoAprobacion } from '../../shared/enums/tipo-aprobacion.enum';
 import { TipoOrigenAlerta } from '../../shared/enums/tipo-origen-alerta.enum';
-import { evaluarAutoAprobacionPorMonto } from '../../shared/utils/aprobacion.util';
+import {
+  ResultadoAprobacion,
+  evaluarAutoAprobacionPorMonto,
+} from '../../shared/utils/aprobacion.util';
 import { AlertaService } from '../alerta/alerta.service';
 import { ConfiguracionService } from '../configuracion/configuracion.service';
 import { CrearGastoDto } from './dto/create-gasto.dto';
@@ -60,13 +64,19 @@ export class GastoService {
     dto: CrearGastoDto,
     fincaId: string,
     creadoPor: string,
+    rolCreador: RolUsuario,
   ): Promise<GastoResponse> {
     const config = await this.configuracionService.obtenerOCrear(fincaId);
-    const aprobacion = evaluarAutoAprobacionPorMonto(
-      dto.monto,
-      config.aplicaAGastos,
-      config,
-    );
+    // Un gasto creado por el administrador SIEMPRE requiere aprobación
+    // manual del dueño — nunca se auto-aprueba por monto ni por tiempo.
+    const aprobacion: ResultadoAprobacion =
+      rolCreador === RolUsuario.ADMINISTRADOR_FINCA
+        ? {
+            estadoAprobacion: EstadoAprobacion.PENDIENTE,
+            tipoAprobacion: TipoAprobacion.PENDIENTE,
+            autoAprobado: false,
+          }
+        : evaluarAutoAprobacionPorMonto(dto.monto, config.aplicaAGastos, config);
 
     const gasto = await this.gastoRepository.create({
       fincaId,

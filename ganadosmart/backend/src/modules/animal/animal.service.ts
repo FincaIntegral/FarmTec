@@ -14,11 +14,13 @@ import { TipoOrigenAlerta } from '../../shared/enums/tipo-origen-alerta.enum';
 import { AlertaService } from '../alerta/alerta.service';
 import { PotreroRepository } from '../potrero/potrero.repository';
 import { ReproduccionRepository } from '../reproduccion/reproduccion.repository';
+import { SupabaseStorageService } from '../../shared/services/supabase-storage.service';
 import { AnimalRepository, FiltrosAnimal } from './animal.repository';
 import { ActualizarFotoDto } from './dto/actualizar-foto.dto';
 import { AnimalListItemResponse } from './dto/animal-list-item.dto';
 import { AnimalResponse } from './dto/animal-response.dto';
 import { CrearAnimalDto } from './dto/create-animal.dto';
+import { ReactivarAnimalDto } from './dto/reactivar-animal.dto';
 import { RegistrarMortalidadDto } from './dto/registrar-mortalidad.dto';
 import { RegistrarPesoDto } from './dto/registrar-peso.dto';
 
@@ -29,6 +31,7 @@ export class AnimalService {
     private readonly reproduccionRepository: ReproduccionRepository,
     private readonly potreroRepository: PotreroRepository,
     private readonly alertaService: AlertaService,
+    private readonly storageService: SupabaseStorageService,
   ) {}
 
   async findAll(
@@ -196,6 +199,61 @@ export class AnimalService {
     );
   }
 
+  // Reactivar mortalidad registrada por error — exclusivo dueno_finca
+  // (verificado por @Roles en el controller). El motivo no tiene tabla de
+  // auditoría propia en schema.sql: se deja como alerta informativa.
+  async reactivar(
+    id: string,
+    fincaId: string,
+    dto: ReactivarAnimalDto,
+  ): Promise<AnimalResponse> {
+    const animal = await this.animalRepository.findById(id, fincaId);
+    if (!animal) {
+      throw new NotFoundException('Animal no encontrado');
+    }
+    if (animal.estado !== EstadoAnimal.MUERTO) {
+      throw new ConflictException('El animal no está registrado como muerto');
+    }
+
+    await this.animalRepository.reactivar(id, fincaId);
+
+    await this.alertaService.crear(
+      fincaId,
+      id,
+      TipoOrigenAlerta.ANIMAL,
+      `Mortalidad revertida por error en ${animal.codigo}: ${dto.motivo}`,
+      SeveridadAlerta.MEDIA,
+    );
+    return this.findOne(id, fincaId);
+  }
+
+  // El administrador NO puede reactivar directamente — solo puede pedirle
+  // al dueño que lo haga. Esto solo notifica (alerta); el animal sigue
+  // muerto hasta que el dueño use PATCH /animales/{id}/reactivar él mismo.
+  async solicitarReactivacion(
+    id: string,
+    fincaId: string,
+    dto: ReactivarAnimalDto,
+  ): Promise<{ mensaje: string }> {
+    const animal = await this.animalRepository.findById(id, fincaId);
+    if (!animal) {
+      throw new NotFoundException('Animal no encontrado');
+    }
+    if (animal.estado !== EstadoAnimal.MUERTO) {
+      throw new ConflictException('El animal no está registrado como muerto');
+    }
+
+    await this.alertaService.crear(
+      fincaId,
+      id,
+      TipoOrigenAlerta.ANIMAL,
+      `El administrador solicita reactivar a ${animal.codigo} (marcado muerto por error): ${dto.motivo}`,
+      SeveridadAlerta.ALTA,
+    );
+
+    return { mensaje: 'Solicitud enviada al dueño de la finca' };
+  }
+
   async actualizarFoto(
     id: string,
     fincaId: string,
@@ -207,6 +265,21 @@ export class AnimalService {
     }
 
     await this.animalRepository.actualizarFoto(id, fincaId, dto.fotoUrl);
+  }
+
+  async subirFoto(
+    id: string,
+    fincaId: string,
+    archivo: Express.Multer.File,
+  ): Promise<{ fotoUrl: string }> {
+    const animal = await this.animalRepository.findById(id, fincaId);
+    if (!animal) {
+      throw new NotFoundException('Animal no encontrado');
+    }
+
+    const fotoUrl = await this.storageService.subirFotoAnimal(fincaId, id, archivo);
+    await this.animalRepository.actualizarFoto(id, fincaId, fotoUrl);
+    return { fotoUrl };
   }
 
   private async validarCodigoYPadres(

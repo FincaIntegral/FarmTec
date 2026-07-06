@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AlertaModule } from '../alerta/alerta.module';
 import { Animal } from '../animal/entities/animal.entity';
 import { MovimientoGanado } from './entities/movimiento-ganado.entity';
 import { Potrero } from './entities/potrero.entity';
@@ -9,7 +10,10 @@ import { PotreroService } from './potrero.service';
 
 @Module({
   // Animal solo para validar que el animal del movimiento sea de la finca.
-  imports: [TypeOrmModule.forFeature([Potrero, MovimientoGanado, Animal])],
+  imports: [
+    TypeOrmModule.forFeature([Potrero, MovimientoGanado, Animal]),
+    AlertaModule,
+  ],
   controllers: [PotreroController],
   providers: [PotreroService, PotreroRepository],
   exports: [PotreroRepository],

@@ -33,6 +33,26 @@
           </button>
         </div>
       }
+      @if (esDueno() && a.estado === 'muerto') {
+        <div class="flex items-center gap-2">
+          <button
+            (click)="abrirModalReactivar()"
+            class="flex items-center gap-1.5 text-xs font-black bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg px-3 py-2 transition-all font-heading"
+          >
+            <svg lucideRotateCcw [size]="11"></svg>Reactivar (fue un error)
+          </button>
+        </div>
+      }
+      @if (esAdmin() && a.estado === 'muerto') {
+        <div class="flex items-center gap-2">
+          <button
+            (click)="abrirModalSolicitar()"
+            class="flex items-center gap-1.5 text-xs font-black bg-muted border border-border hover:border-emerald-500/60 text-foreground rounded-lg px-3 py-2 transition-all font-heading"
+          >
+            <svg lucideRotateCcw [size]="11"></svg>Solicitar reactivación al dueño
+          </button>
+        </div>
+      }
     </div>
 
     <div class="flex flex-col lg:flex-row gap-4 min-h-0 flex-1">
@@ -43,6 +63,15 @@
               <img [src]="a.fotoUrl" alt="Foto del animal" class="w-full h-full object-cover" />
             } @else {
               <svg lucideBeef [size]="56" class="text-amber-300 dark:text-amber-800 opacity-60"></svg>
+            }
+            @if (puedeRegistrarCampo()) {
+              <button
+                (click)="abrirModalFoto()"
+                title="Cambiar foto"
+                class="absolute bottom-1.5 right-1.5 flex items-center gap-1 text-[10px] font-bold bg-card/90 border border-border rounded-lg px-2 py-1 text-foreground hover:border-amber-500/60 transition-all"
+              >
+                <svg lucideCamera [size]="11"></svg>{{ a.fotoUrl ? 'Cambiar' : 'Agregar foto' }}
+              </button>
             }
           </div>
 
@@ -199,6 +228,164 @@
           class="w-full bg-red-600 hover:bg-red-500 disabled:opacity-60 text-white font-black py-2.5 rounded-lg text-xs transition-all mt-2 font-heading"
         >
           {{ registrandoMortalidad() ? 'Guardando…' : 'Confirmar mortalidad' }}
+        </button>
+      </form>
+    </div>
+  </div>
+}
+
+@if (mostrarModalReactivar()) {
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" (click)="cerrarModalReactivar()">
+    <div class="bg-card border border-border rounded-xl p-5 w-full max-w-sm" (click)="$event.stopPropagation()">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-sm font-black text-foreground font-heading">Reactivar animal</h3>
+        <button (click)="cerrarModalReactivar()" class="text-muted-foreground hover:text-foreground">
+          <svg lucideX [size]="16"></svg>
+        </button>
+      </div>
+      <p class="text-[11px] text-muted-foreground mb-3">
+        El animal vuelve a estado "activo" y el registro de mortalidad anterior se elimina — úsalo solo si la
+        mortalidad fue un error de registro.
+      </p>
+      <form [formGroup]="formReactivar" (ngSubmit)="reactivar()" class="space-y-3">
+        <div>
+          <label class="block text-[10px] font-black text-muted-foreground mb-1 uppercase tracking-wider font-heading">Motivo *</label>
+          <textarea
+            formControlName="motivo"
+            rows="3"
+            placeholder="Ej. fue un error de diagnóstico, el animal está vivo"
+            class="w-full bg-muted border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none focus:border-amber-500/60"
+          ></textarea>
+        </div>
+        @if (errorReactivar()) {
+          <p class="text-xs text-red-500 font-bold">{{ errorReactivar() }}</p>
+        }
+        <button
+          type="submit"
+          [disabled]="reactivando()"
+          class="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-white font-black py-2.5 rounded-lg text-xs transition-all mt-2 font-heading"
+        >
+          {{ reactivando() ? 'Guardando…' : 'Confirmar reactivación' }}
+        </button>
+      </form>
+    </div>
+  </div>
+}
+
+@if (mostrarModalSolicitar()) {
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" (click)="cerrarModalSolicitar()">
+    <div class="bg-card border border-border rounded-xl p-5 w-full max-w-sm" (click)="$event.stopPropagation()">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-sm font-black text-foreground font-heading">Solicitar reactivación</h3>
+        <button (click)="cerrarModalSolicitar()" class="text-muted-foreground hover:text-foreground">
+          <svg lucideX [size]="16"></svg>
+        </button>
+      </div>
+
+      @if (solicitudEnviada()) {
+        <p class="text-xs text-emerald-600 dark:text-emerald-400 font-bold py-4 text-center">
+          Solicitud enviada — el dueño de la finca la revisará.
+        </p>
+      } @else {
+        <p class="text-[11px] text-muted-foreground mb-3">
+          Solo el dueño puede reactivar un animal. Esto le envía una notificación para que la revise — el
+          animal sigue marcado como muerto hasta que él lo confirme.
+        </p>
+        <form [formGroup]="formSolicitar" (ngSubmit)="solicitarReactivacion()" class="space-y-3">
+          <div>
+            <label class="block text-[10px] font-black text-muted-foreground mb-1 uppercase tracking-wider font-heading">Motivo *</label>
+            <textarea
+              formControlName="motivo"
+              rows="3"
+              placeholder="Ej. fue un error de diagnóstico, el animal está vivo"
+              class="w-full bg-muted border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none focus:border-amber-500/60"
+            ></textarea>
+          </div>
+          @if (errorSolicitar()) {
+            <p class="text-xs text-red-500 font-bold">{{ errorSolicitar() }}</p>
+          }
+          <button
+            type="submit"
+            [disabled]="solicitando()"
+            class="w-full bg-amber-600 hover:bg-amber-500 disabled:opacity-60 text-white font-black py-2.5 rounded-lg text-xs transition-all mt-2 font-heading"
+          >
+            {{ solicitando() ? 'Enviando…' : 'Enviar solicitud al dueño' }}
+          </button>
+        </form>
+      }
+    </div>
+  </div>
+}
+
+@if (mostrarModalFoto()) {
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" (click)="cerrarModalFoto()">
+    <div class="bg-card border border-border rounded-xl p-5 w-full max-w-sm" (click)="$event.stopPropagation()">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-sm font-black text-foreground font-heading">Foto del animal</h3>
+        <button (click)="cerrarModalFoto()" class="text-muted-foreground hover:text-foreground">
+          <svg lucideX [size]="16"></svg>
+        </button>
+      </div>
+      <div class="flex gap-1.5 mb-3">
+        <button
+          type="button"
+          (click)="seleccionarModoFoto('url')"
+          class="flex-1 text-xs px-3 py-1.5 rounded-lg font-bold transition-all font-heading"
+          [class.bg-amber-600]="modoFoto() === 'url'"
+          [class.text-white]="modoFoto() === 'url'"
+          [class.bg-muted]="modoFoto() !== 'url'"
+          [class.border]="modoFoto() !== 'url'"
+          [class.border-border]="modoFoto() !== 'url'"
+          [class.text-muted-foreground]="modoFoto() !== 'url'"
+        >
+          Pegar URL
+        </button>
+        <button
+          type="button"
+          (click)="seleccionarModoFoto('archivo')"
+          class="flex-1 text-xs px-3 py-1.5 rounded-lg font-bold transition-all font-heading"
+          [class.bg-amber-600]="modoFoto() === 'archivo'"
+          [class.text-white]="modoFoto() === 'archivo'"
+          [class.bg-muted]="modoFoto() !== 'archivo'"
+          [class.border]="modoFoto() !== 'archivo'"
+          [class.border-border]="modoFoto() !== 'archivo'"
+          [class.text-muted-foreground]="modoFoto() !== 'archivo'"
+        >
+          Subir archivo
+        </button>
+      </div>
+
+      <form [formGroup]="formFoto" (ngSubmit)="guardarFoto()" class="space-y-3">
+        @if (modoFoto() === 'url') {
+          <div>
+            <label class="block text-[10px] font-black text-muted-foreground mb-1 uppercase tracking-wider font-heading">URL de la foto *</label>
+            <input
+              formControlName="fotoUrl"
+              placeholder="https://..."
+              class="w-full bg-muted border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none focus:border-amber-500/60"
+            />
+          </div>
+        } @else {
+          <div>
+            <label class="block text-[10px] font-black text-muted-foreground mb-1 uppercase tracking-wider font-heading">Archivo *</label>
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              (change)="onArchivoSeleccionado($event)"
+              class="w-full bg-muted border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none focus:border-amber-500/60"
+            />
+            <p class="text-[10px] text-muted-foreground mt-1">JPEG, PNG o WEBP, máximo 5MB.</p>
+          </div>
+        }
+        @if (errorFoto()) {
+          <p class="text-xs text-red-500 font-bold">{{ errorFoto() }}</p>
+        }
+        <button
+          type="submit"
+          [disabled]="guardandoFoto()"
+          class="w-full bg-amber-600 hover:bg-amber-500 disabled:opacity-60 text-white font-black py-2.5 rounded-lg text-xs transition-all mt-2 font-heading"
+        >
+          {{ guardandoFoto() ? 'Guardando…' : 'Guardar foto' }}
         </button>
       </form>
     </div>

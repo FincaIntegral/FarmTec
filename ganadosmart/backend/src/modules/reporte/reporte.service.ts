@@ -22,12 +22,13 @@ export class ReporteService {
       this.gastoService.aplicarVencimientos(fincaId),
     ]);
 
-    const [hato, pesoPromedio, repro, muertes, pesajes, finanzas] =
+    const [hato, pesoPromedio, repro, muertes, totalMuertos, pesajes, finanzas] =
       await Promise.all([
         this.reporteRepository.conteosHato(fincaId),
         this.reporteRepository.pesoPromedio(fincaId),
         this.reporteRepository.conteosReproduccion(fincaId),
         this.reporteRepository.muertes12Meses(fincaId),
+        this.reporteRepository.totalMuertos(fincaId),
         this.reporteRepository.pesajes7Dias(fincaId),
         this.reporteRepository.finanzasMesActual(fincaId),
       ]);
@@ -40,6 +41,7 @@ export class ReporteService {
 
     return {
       totalAnimales,
+      animalesMuertos: totalMuertos,
       vacas,
       toros: parseInt(hato.toros, 10),
       becerros: parseInt(hato.becerros, 10),

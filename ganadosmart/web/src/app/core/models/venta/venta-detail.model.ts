@@ -1,3 +1,3 @@
-﻿import { VentaModel } from './venta.model';
+import { VentaModel } from './venta.model';
 
 export interface VentaDetailModel extends VentaModel {}

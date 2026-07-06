@@ -15,8 +15,9 @@ export class Reproduccion {
   @Column({ name: 'finca_id', type: 'uuid' })
   fincaId: string;
 
-  @Column({ name: 'toro_id', type: 'uuid' })
-  toroId: string;
+  // NULL cuando la inseminación fue con pajilla externa (sin toro propio)
+  @Column({ name: 'toro_id', type: 'uuid', nullable: true })
+  toroId: string | null;
 
   @Column({ name: 'vaca_id', type: 'uuid' })
   vacaId: string;
@@ -40,6 +41,12 @@ export class Reproduccion {
 
   @Column({ name: 'becerro_resultante_id', type: 'uuid', nullable: true })
   becerroResultanteId: string | null;
+
+  @Column({ name: 'pajilla_proveedor', type: 'varchar', length: 200, nullable: true })
+  pajillaProveedor: string | null;
+
+  @Column({ name: 'pajilla_raza', type: 'varchar', length: 150, nullable: true })
+  pajillaRaza: string | null;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;

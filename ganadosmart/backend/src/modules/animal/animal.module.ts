@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AlertaModule } from '../alerta/alerta.module';
 import { PotreroModule } from '../potrero/potrero.module';
 import { ReproduccionModule } from '../reproduccion/reproduccion.module';
+import { SupabaseStorageService } from '../../shared/services/supabase-storage.service';
 import { AnimalController } from './animal.controller';
 import { AnimalRepository } from './animal.repository';
 import { AnimalService } from './animal.service';
@@ -18,7 +19,7 @@ import { Mortalidad } from './entities/mortalidad.entity';
     AlertaModule,
   ],
   controllers: [AnimalController],
-  providers: [AnimalService, AnimalRepository],
+  providers: [AnimalService, AnimalRepository, SupabaseStorageService],
   exports: [AnimalService, AnimalRepository],
 })
 export class AnimalModule {}

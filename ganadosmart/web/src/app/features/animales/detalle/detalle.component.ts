@@ -4,8 +4,10 @@ import { ActivatedRoute, Router } from '@angular/router';
 import {
   LucideArrowLeft,
   LucideBeef,
+  LucideCamera,
   LucideHeart,
   LucidePlus,
+  LucideRotateCcw,
   LucideScale,
   LucideSkull,
   LucideTrendingUp,
@@ -43,8 +45,10 @@ const ESTADO_VARIANT: Record<string, BadgeVariant> = {
     TimelineHistorialComponent,
     LucideArrowLeft,
     LucideBeef,
+    LucideCamera,
     LucidePlus,
     LucideSkull,
+    LucideRotateCcw,
     LucideX,
   ],
   templateUrl: './detalle.component.html',
@@ -68,6 +72,9 @@ export class DetalleComponent implements OnInit {
     const rol = this.authService.usuario()?.rol;
     return rol === 'dueno_finca' || rol === 'administrador_finca' || rol === 'veterinario';
   });
+
+  readonly esDueno = computed(() => this.authService.usuario()?.rol === 'dueno_finca');
+  readonly esAdmin = computed(() => this.authService.usuario()?.rol === 'administrador_finca');
 
   readonly edad = computed(() => {
     const fecha = this.animal()?.fechaNacimiento;
@@ -106,6 +113,33 @@ export class DetalleComponent implements OnInit {
   readonly formMortalidad = this.fb.nonNullable.group({
     fecha: [this.hoy(), Validators.required],
     causa: ['', Validators.required],
+  });
+
+  // ── Modal: reactivar (mortalidad registrada por error) ──
+  readonly mostrarModalReactivar = signal(false);
+  readonly reactivando = signal(false);
+  readonly errorReactivar = signal<string | null>(null);
+  readonly formReactivar = this.fb.nonNullable.group({
+    motivo: ['', Validators.required],
+  });
+
+  // ── Modal: solicitar reactivación (administrador → notifica al dueño) ──
+  readonly mostrarModalSolicitar = signal(false);
+  readonly solicitando = signal(false);
+  readonly errorSolicitar = signal<string | null>(null);
+  readonly solicitudEnviada = signal(false);
+  readonly formSolicitar = this.fb.nonNullable.group({
+    motivo: ['', Validators.required],
+  });
+
+  // ── Modal: foto — por URL o subiendo un archivo ──
+  readonly mostrarModalFoto = signal(false);
+  readonly guardandoFoto = signal(false);
+  readonly errorFoto = signal<string | null>(null);
+  readonly modoFoto = signal<'url' | 'archivo'>('url');
+  readonly archivoFoto = signal<File | null>(null);
+  readonly formFoto = this.fb.nonNullable.group({
+    fotoUrl: [''],
   });
 
   ngOnInit(): void {
@@ -192,6 +226,137 @@ export class DetalleComponent implements OnInit {
       error: (err: { message?: string }) => {
         this.registrandoMortalidad.set(false);
         this.errorMortalidad.set(err?.message ?? 'No se pudo registrar la mortalidad');
+      },
+    });
+  }
+
+  abrirModalReactivar(): void {
+    this.formReactivar.reset({ motivo: '' });
+    this.errorReactivar.set(null);
+    this.mostrarModalReactivar.set(true);
+  }
+
+  cerrarModalReactivar(): void {
+    this.mostrarModalReactivar.set(false);
+  }
+
+  reactivar(): void {
+    const animal = this.animal();
+    if (!animal || this.formReactivar.invalid) {
+      this.formReactivar.markAllAsTouched();
+      return;
+    }
+    this.reactivando.set(true);
+    this.errorReactivar.set(null);
+    this.animalService.reactivar(animal.id, this.formReactivar.getRawValue()).subscribe({
+      next: (actualizado) => {
+        this.reactivando.set(false);
+        this.mostrarModalReactivar.set(false);
+        this.animal.set(actualizado);
+      },
+      error: (err: { message?: string }) => {
+        this.reactivando.set(false);
+        this.errorReactivar.set(err?.message ?? 'No se pudo reactivar el animal');
+      },
+    });
+  }
+
+  abrirModalSolicitar(): void {
+    this.formSolicitar.reset({ motivo: '' });
+    this.errorSolicitar.set(null);
+    this.solicitudEnviada.set(false);
+    this.mostrarModalSolicitar.set(true);
+  }
+
+  cerrarModalSolicitar(): void {
+    this.mostrarModalSolicitar.set(false);
+  }
+
+  solicitarReactivacion(): void {
+    const animal = this.animal();
+    if (!animal || this.formSolicitar.invalid) {
+      this.formSolicitar.markAllAsTouched();
+      return;
+    }
+    this.solicitando.set(true);
+    this.errorSolicitar.set(null);
+    this.animalService.solicitarReactivacion(animal.id, this.formSolicitar.getRawValue()).subscribe({
+      next: () => {
+        this.solicitando.set(false);
+        this.solicitudEnviada.set(true);
+      },
+      error: (err: { message?: string }) => {
+        this.solicitando.set(false);
+        this.errorSolicitar.set(err?.message ?? 'No se pudo enviar la solicitud');
+      },
+    });
+  }
+
+  abrirModalFoto(): void {
+    this.formFoto.reset({ fotoUrl: this.animal()?.fotoUrl ?? '' });
+    this.archivoFoto.set(null);
+    this.modoFoto.set('url');
+    this.errorFoto.set(null);
+    this.mostrarModalFoto.set(true);
+  }
+
+  cerrarModalFoto(): void {
+    this.mostrarModalFoto.set(false);
+  }
+
+  seleccionarModoFoto(modo: 'url' | 'archivo'): void {
+    this.modoFoto.set(modo);
+    this.errorFoto.set(null);
+  }
+
+  onArchivoSeleccionado(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.archivoFoto.set(input.files?.[0] ?? null);
+  }
+
+  guardarFoto(): void {
+    const animal = this.animal();
+    if (!animal) {
+      return;
+    }
+
+    if (this.modoFoto() === 'archivo') {
+      const archivo = this.archivoFoto();
+      if (!archivo) {
+        this.errorFoto.set('Selecciona un archivo de imagen');
+        return;
+      }
+      this.guardandoFoto.set(true);
+      this.errorFoto.set(null);
+      this.animalService.subirFoto(animal.id, archivo).subscribe({
+        next: () => {
+          this.guardandoFoto.set(false);
+          this.mostrarModalFoto.set(false);
+          this.cargar(animal.id);
+        },
+        error: (err: { message?: string }) => {
+          this.guardandoFoto.set(false);
+          this.errorFoto.set(err?.message ?? 'No se pudo subir la foto');
+        },
+      });
+      return;
+    }
+
+    if (this.formFoto.invalid || !this.formFoto.value.fotoUrl) {
+      this.errorFoto.set('Ingresa una URL de foto');
+      return;
+    }
+    this.guardandoFoto.set(true);
+    this.errorFoto.set(null);
+    this.animalService.actualizarFoto(animal.id, this.formFoto.getRawValue()).subscribe({
+      next: () => {
+        this.guardandoFoto.set(false);
+        this.mostrarModalFoto.set(false);
+        this.cargar(animal.id);
+      },
+      error: (err: { message?: string }) => {
+        this.guardandoFoto.set(false);
+        this.errorFoto.set(err?.message ?? 'No se pudo actualizar la foto');
       },
     });
   }

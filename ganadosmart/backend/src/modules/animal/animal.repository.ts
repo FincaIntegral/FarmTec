@@ -152,4 +152,15 @@ export class AnimalRepository {
       );
     });
   }
+
+  // Reactivar: borra el registro de mortalidad (fue un error) y el animal
+  // vuelve a 'activo'. Si el animal muere de nuevo más adelante, el
+  // UNIQUE(animal_id) de mortalidad no molesta porque ya no queda fila vieja.
+  async reactivar(id: string, fincaId: string): Promise<Animal | null> {
+    await this.dataSource.transaction(async (manager) => {
+      await manager.delete(Mortalidad, { animalId: id, fincaId });
+      await manager.update(Animal, { id, fincaId }, { estado: EstadoAnimal.ACTIVO });
+    });
+    return this.findById(id, fincaId);
+  }
 }
