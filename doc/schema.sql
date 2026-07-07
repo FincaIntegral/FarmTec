@@ -85,7 +85,8 @@ CREATE TYPE categoria_gasto AS ENUM (
 CREATE TYPE tipo_origen_alerta AS ENUM (
   'animal',
   'venta',
-  'gasto'
+  'gasto',
+  'potrero'
 );
 
 CREATE TYPE severidad_alerta AS ENUM (
@@ -283,12 +284,18 @@ CREATE TABLE mortalidad (
 CREATE TABLE reproduccion (
   id                    UUID                PRIMARY KEY DEFAULT gen_random_uuid(),
   finca_id              UUID                NOT NULL,
-  toro_id               UUID                NOT NULL,
+  -- NULL cuando la inseminación fue con pajilla externa (sin toro propio)
+  toro_id               UUID,
   vaca_id               UUID                NOT NULL,
   tipo                  tipo_reproduccion   NOT NULL,
   fecha                 DATE                NOT NULL,
   fecha_probable_parto  DATE,
   estado                estado_reproduccion NOT NULL DEFAULT 'en_curso',
+
+  -- Pajilla externa (inseminación artificial sin toro propio) — ambos se
+  -- llenan juntos o ninguno, ver chk_repro_origen_semen
+  pajilla_proveedor     VARCHAR(200),
+  pajilla_raza          VARCHAR(150),
 
   -- Se llena al confirmar parto exitoso
   -- El becerro se crea con madre_id y padre_id heredados automáticamente
@@ -311,7 +318,21 @@ CREATE TABLE reproduccion (
   -- Una vaca no puede tener dos eventos reproductivos activos al mismo tiempo
   CONSTRAINT uq_repro_vaca_en_curso
     EXCLUDE USING btree (vaca_id WITH =)
-    WHERE (estado = 'en_curso')
+    WHERE (estado = 'en_curso'),
+
+  -- monta_natural siempre requiere un toro propio (monta física) y nunca
+  -- pajilla; inseminacion admite EXACTAMENTE una de las dos opciones:
+  -- toro propio (semen propio) O pajilla externa (proveedor + raza juntos).
+  CONSTRAINT chk_repro_origen_semen CHECK (
+    (tipo = 'monta_natural' AND toro_id IS NOT NULL
+      AND pajilla_proveedor IS NULL AND pajilla_raza IS NULL)
+    OR
+    (tipo = 'inseminacion' AND (
+      (toro_id IS NOT NULL AND pajilla_proveedor IS NULL AND pajilla_raza IS NULL)
+      OR
+      (toro_id IS NULL AND pajilla_proveedor IS NOT NULL AND pajilla_raza IS NOT NULL)
+    ))
+  )
 );
 
 -- ============================================================

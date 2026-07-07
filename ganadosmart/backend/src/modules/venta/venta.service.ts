@@ -10,9 +10,13 @@ import {
 } from '../../shared/dto/paginacion-meta.dto';
 import { EstadoAnimal } from '../../shared/enums/estado-animal.enum';
 import { EstadoAprobacion } from '../../shared/enums/estado-aprobacion.enum';
+import { RolUsuario } from '../../shared/enums/rol-usuario.enum';
 import { TipoAprobacion } from '../../shared/enums/tipo-aprobacion.enum';
 import { TipoOrigenAlerta } from '../../shared/enums/tipo-origen-alerta.enum';
-import { evaluarAutoAprobacionPorMonto } from '../../shared/utils/aprobacion.util';
+import {
+  ResultadoAprobacion,
+  evaluarAutoAprobacionPorMonto,
+} from '../../shared/utils/aprobacion.util';
 import { AlertaService } from '../alerta/alerta.service';
 import { ConfiguracionService } from '../configuracion/configuracion.service';
 import { CrearVentaDto } from './dto/create-venta.dto';
@@ -63,6 +67,7 @@ export class VentaService {
     dto: CrearVentaDto,
     fincaId: string,
     creadoPor: string,
+    rolCreador: RolUsuario,
   ): Promise<VentaResponse> {
     if (dto.animalId) {
       const animal = await this.ventaRepository.findAnimalById(
@@ -86,11 +91,16 @@ export class VentaService {
     }
 
     const config = await this.configuracionService.obtenerOCrear(fincaId);
-    const aprobacion = evaluarAutoAprobacionPorMonto(
-      dto.monto,
-      config.aplicaAVentas,
-      config,
-    );
+    // Una venta creada por el administrador SIEMPRE requiere aprobación
+    // manual del dueño — nunca se auto-aprueba por monto ni por tiempo.
+    const aprobacion: ResultadoAprobacion =
+      rolCreador === RolUsuario.ADMINISTRADOR_FINCA
+        ? {
+            estadoAprobacion: EstadoAprobacion.PENDIENTE,
+            tipoAprobacion: TipoAprobacion.PENDIENTE,
+            autoAprobado: false,
+          }
+        : evaluarAutoAprobacionPorMonto(dto.monto, config.aplicaAVentas, config);
 
     const venta = await this.ventaRepository.create({
       fincaId,

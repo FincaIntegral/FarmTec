@@ -1,15 +1,9 @@
-﻿import { CategoriaGasto, EstadoAprobacion, TipoAprobacion } from '../domain-types';
+import { CategoriaGasto } from '../domain-types';
 
+// Refleja CrearGastoDto: el resto (fincaId, estados, creadoPor) es server-side.
 export interface GastoCreateRequestModel {
-  fincaId: string;
   categoria: CategoriaGasto;
   monto: number;
   descripcion?: string;
   fecha: string;
-  estadoAprobacion?: EstadoAprobacion;
-  tipoAprobacion?: TipoAprobacion;
-  autoAprobado?: boolean;
-  creadoPor: string;
-  aprobadoPor?: string;
-  motivoRechazo?: string;
 }

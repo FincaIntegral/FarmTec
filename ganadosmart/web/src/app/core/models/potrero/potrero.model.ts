@@ -1,12 +1,11 @@
-﻿import { EstadoPotrero } from '../domain-types';
+import { EstadoPotrero } from '../domain-types';
 
 export interface PotreroModel {
   id: string;
   fincaId: string;
   nombre: string;
-  hectareas?: number;
-  tipoPasto?: string;
-  capacidadEstimada?: number;
+  hectareas: number | null;
+  tipoPasto: string | null;
+  capacidadEstimada: number | null;
   estado: EstadoPotrero;
-  createdAt: string;
 }

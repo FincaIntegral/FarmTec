@@ -1,9 +1,9 @@
-﻿import { EstadoAprobacion, TipoAprobacion } from '../domain-types';
+import { EstadoAprobacion, TipoAprobacion } from '../domain-types';
 
 export interface VentaModel {
   id: string;
   fincaId: string;
-  animalId?: string;
+  animalId: string | null;
   comprador: string;
   monto: number;
   fecha: string;
@@ -11,7 +11,7 @@ export interface VentaModel {
   tipoAprobacion: TipoAprobacion;
   autoAprobado: boolean;
   creadoPor: string;
-  aprobadoPor?: string;
-  motivoRechazo?: string;
+  aprobadoPor: string | null;
+  motivoRechazo: string | null;
   createdAt: string;
 }

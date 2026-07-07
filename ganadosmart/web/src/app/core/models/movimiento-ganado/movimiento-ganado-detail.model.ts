@@ -1,3 +1,3 @@
-﻿import { MovimientoGanadoModel } from './movimiento-ganado.model';
+import { MovimientoGanadoModel } from './movimiento-ganado.model';
 
 export interface MovimientoGanadoDetailModel extends MovimientoGanadoModel {}

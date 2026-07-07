@@ -1,12 +1,10 @@
-﻿import { EstadoReproduccion, TipoReproduccion } from '../domain-types';
+import { TipoReproduccion } from '../domain-types';
 
 export interface ReproduccionCreateRequestModel {
-  fincaId: string;
-  toroId: string;
+  toroId?: string;
+  pajillaProveedor?: string;
+  pajillaRaza?: string;
   vacaId: string;
   tipo: TipoReproduccion;
   fecha: string;
-  fechaProbableParto?: string;
-  estado?: EstadoReproduccion;
-  becerroResultanteId?: string;
 }

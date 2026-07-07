@@ -51,7 +51,7 @@ export class VentaController {
   @Roles(...ROLES_FINANCIEROS)
   @Post()
   create(@Body() dto: CrearVentaDto, @CurrentUser() usuario: JwtPayload) {
-    return this.ventaService.create(dto, usuario.fincaId, usuario.sub);
+    return this.ventaService.create(dto, usuario.fincaId, usuario.sub, usuario.rol);
   }
 
   @Roles(RolUsuario.DUENO_FINCA)

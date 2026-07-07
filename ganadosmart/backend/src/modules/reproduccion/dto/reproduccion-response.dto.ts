@@ -5,7 +5,9 @@ import { Reproduccion } from '../entities/reproduccion.entity';
 export class ReproduccionResponse {
   id: string;
   fincaId: string;
-  toroId: string;
+  toroId: string | null;
+  pajillaProveedor: string | null;
+  pajillaRaza: string | null;
   vacaId: string;
   tipo: TipoReproduccion;
   fecha: string;
@@ -19,6 +21,8 @@ export class ReproduccionResponse {
     response.id = reproduccion.id;
     response.fincaId = reproduccion.fincaId;
     response.toroId = reproduccion.toroId;
+    response.pajillaProveedor = reproduccion.pajillaProveedor;
+    response.pajillaRaza = reproduccion.pajillaRaza;
     response.vacaId = reproduccion.vacaId;
     response.tipo = reproduccion.tipo;
     response.fecha = reproduccion.fecha;

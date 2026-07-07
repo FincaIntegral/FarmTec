@@ -1,11 +1,9 @@
-﻿import { RolUsuario } from '../domain-types';
+import { RolUsuario } from '../domain-types';
 
+// Refleja CrearUsuarioDto: el backend hashea la contraseña y toma fincaId del JWT.
 export interface UsuarioCreateRequestModel {
-  fincaId: string;
   nombre: string;
   correo: string;
-  contrasenaHash: string;
+  contrasena: string;
   rol: RolUsuario;
-  activo?: boolean;
-  ultimoAcceso?: string;
 }

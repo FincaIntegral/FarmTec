@@ -1,9 +1,3 @@
-﻿import { EstadoPotrero } from '../domain-types';
+import { PotreroModel } from './potrero.model';
 
-export interface PotreroSummaryModel {
-  id: string;
-  nombre: string;
-  fincaId: string;
-  hectareas?: number;
-  estado: EstadoPotrero;
-}
+export interface PotreroSummaryModel extends PotreroModel {}

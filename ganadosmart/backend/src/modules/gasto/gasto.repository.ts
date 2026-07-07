@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CategoriaGasto } from '../../shared/enums/categoria-gasto.enum';
 import { EstadoAprobacion } from '../../shared/enums/estado-aprobacion.enum';
+import { RolUsuario } from '../../shared/enums/rol-usuario.enum';
 import { TipoAprobacion } from '../../shared/enums/tipo-aprobacion.enum';
 import { Gasto } from './entities/gasto.entity';
 
@@ -75,6 +76,12 @@ export class GastoRepository {
       .andWhere("created_at < NOW() - (:dias * INTERVAL '1 day')", {
         dias: diasEspera,
       })
+      // Los creados por el administrador nunca se auto-aprueban por
+      // tiempo — siempre requieren resolución manual del dueño.
+      .andWhere(
+        'creado_por NOT IN (SELECT id FROM usuario WHERE rol = :rolAdmin)',
+        { rolAdmin: RolUsuario.ADMINISTRADOR_FINCA },
+      )
       .execute();
   }
 }

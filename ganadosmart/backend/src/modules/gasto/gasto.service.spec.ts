@@ -1,6 +1,7 @@
 import { ConflictException } from '@nestjs/common';
 import { CategoriaGasto } from '../../shared/enums/categoria-gasto.enum';
 import { EstadoAprobacion } from '../../shared/enums/estado-aprobacion.enum';
+import { RolUsuario } from '../../shared/enums/rol-usuario.enum';
 import { TipoAprobacion } from '../../shared/enums/tipo-aprobacion.enum';
 import { AlertaService } from '../alerta/alerta.service';
 import { ConfiguracionService } from '../configuracion/configuracion.service';
@@ -51,7 +52,7 @@ describe('GastoService', () => {
   });
 
   it('monto bajo el umbral → auto-aprobado por_monto', async () => {
-    const gasto = await service.create(dtoBase, FINCA, 'user-1');
+    const gasto = await service.create(dtoBase, FINCA, 'user-1', RolUsuario.DUENO_FINCA);
     expect(gasto.estadoAprobacion).toBe(EstadoAprobacion.APROBADO);
     expect(gasto.tipoAprobacion).toBe(TipoAprobacion.POR_MONTO);
     expect(gasto.autoAprobado).toBe(true);
@@ -63,8 +64,20 @@ describe('GastoService', () => {
       aplicaAGastos: false,
     } as ConfiguracionAprobacion);
 
-    const gasto = await service.create(dtoBase, FINCA, 'user-1');
+    const gasto = await service.create(dtoBase, FINCA, 'user-1', RolUsuario.DUENO_FINCA);
     expect(gasto.estadoAprobacion).toBe(EstadoAprobacion.PENDIENTE);
+  });
+
+  it('creado por administrador → siempre pendiente, sin importar el monto', async () => {
+    const gasto = await service.create(
+      dtoBase,
+      FINCA,
+      'admin-1',
+      RolUsuario.ADMINISTRADOR_FINCA,
+    );
+    expect(gasto.estadoAprobacion).toBe(EstadoAprobacion.PENDIENTE);
+    expect(gasto.tipoAprobacion).toBe(TipoAprobacion.PENDIENTE);
+    expect(gasto.autoAprobado).toBe(false);
   });
 
   it('corre el UPDATE de vencidos antes de listar', async () => {

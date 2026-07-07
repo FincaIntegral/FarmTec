@@ -32,6 +32,9 @@ export class RequestBuilder {
   }
 
   buildBody<T>(body?: T, isMultipart?: boolean): T | FormData {
+    if (body instanceof FormData) {
+      return body;
+    }
     if (isMultipart && body && typeof body === 'object') {
       const formData = new FormData();
       for (const [key, value] of Object.entries(body as unknown as Record<string, unknown>)) {

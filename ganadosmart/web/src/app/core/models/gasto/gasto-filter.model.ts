@@ -1,10 +1,10 @@
-﻿import { CategoriaGasto, EstadoAprobacion, TipoAprobacion } from '../domain-types';
+import { CategoriaGasto, EstadoAprobacion } from '../domain-types';
 
+// Refleja los query params reales de GET /gastos (no hay filtros de fecha).
 export interface GastoFilterModel {
-  search?: string;
-  id?: string;
-  fincaId?: string;
   categoria?: CategoriaGasto;
   estadoAprobacion?: EstadoAprobacion;
-  tipoAprobacion?: TipoAprobacion;
+  soloMisAprobaciones?: boolean;
+  pagina?: number;
+  limite?: number;
 }

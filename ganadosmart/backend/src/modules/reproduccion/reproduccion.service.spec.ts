@@ -115,6 +115,145 @@ describe('ReproduccionService', () => {
         ConflictException,
       );
     });
+
+    it('rechaza si el toro es un becerro', async () => {
+      const toroBecerro = { ...toro, categoria: CategoriaAnimal.BECERRO } as Animal;
+      repo.findAnimalById.mockImplementation((id) =>
+        Promise.resolve(id === toro.id ? toroBecerro : vaca),
+      );
+      await expect(service.create(dto, FINCA)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+    });
+
+    it('rechaza si la vaca es una becerra', async () => {
+      const vacaBecerra = { ...vaca, categoria: CategoriaAnimal.BECERRO } as Animal;
+      repo.findAnimalById.mockImplementation((id) =>
+        Promise.resolve(id === toro.id ? toro : vacaBecerra),
+      );
+      await expect(service.create(dto, FINCA)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+    });
+
+    it('rechaza fecha futura', async () => {
+      repo.findAnimalById.mockImplementation((id) =>
+        Promise.resolve(id === toro.id ? toro : vaca),
+      );
+      const manana = new Date();
+      manana.setDate(manana.getDate() + 1);
+      await expect(
+        service.create(
+          { ...dto, fecha: manana.toISOString().slice(0, 10) },
+          FINCA,
+        ),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('rechaza toro muerto en monta natural', async () => {
+      const toroMuerto = { ...toro, estado: EstadoAnimal.MUERTO } as Animal;
+      repo.findAnimalById.mockImplementation((id) =>
+        Promise.resolve(id === toro.id ? toroMuerto : vaca),
+      );
+      await expect(
+        service.create({ ...dto, tipo: TipoReproduccion.MONTA_NATURAL }, FINCA),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('permite toro muerto o vendido en inseminación (semen ya registrado)', async () => {
+      const toroVendido = { ...toro, estado: EstadoAnimal.VENDIDO } as Animal;
+      repo.findAnimalById.mockImplementation((id) =>
+        Promise.resolve(id === toro.id ? toroVendido : vaca),
+      );
+      repo.existeEnCursoParaVaca.mockResolvedValue(false);
+      repo.create.mockImplementation((data) =>
+        Promise.resolve({ ...reproEnCurso, ...data } as Reproduccion),
+      );
+
+      const result = await service.create(
+        { ...dto, tipo: TipoReproduccion.INSEMINACION },
+        FINCA,
+      );
+      expect(result.estado).toBe(EstadoReproduccion.EN_CURSO);
+    });
+
+    it('rechaza vaca muerta incluso en inseminación', async () => {
+      const vacaMuerta = { ...vaca, estado: EstadoAnimal.MUERTO } as Animal;
+      repo.findAnimalById.mockImplementation((id) =>
+        Promise.resolve(id === toro.id ? toro : vacaMuerta),
+      );
+      await expect(
+        service.create({ ...dto, tipo: TipoReproduccion.INSEMINACION }, FINCA),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    describe('pajilla externa (inseminación sin toro propio)', () => {
+      const dtoPajilla = {
+        vacaId: vaca.id,
+        tipo: TipoReproduccion.INSEMINACION,
+        fecha: '2026-01-01',
+        pajillaProveedor: 'ABS Genética',
+        pajillaRaza: 'Angus',
+      };
+
+      it('inseminacion con pajilla (sin toroId) se registra correctamente', async () => {
+        repo.findAnimalById.mockResolvedValue(vaca);
+        repo.existeEnCursoParaVaca.mockResolvedValue(false);
+        repo.create.mockImplementation((data) =>
+          Promise.resolve({ ...reproEnCurso, ...data } as Reproduccion),
+        );
+
+        const result = await service.create(dtoPajilla, FINCA);
+
+        expect(repo.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            toroId: null,
+            pajillaProveedor: 'ABS Genética',
+            pajillaRaza: 'Angus',
+          }),
+        );
+        expect(result.estado).toBe(EstadoReproduccion.EN_CURSO);
+        // sin toroId no se busca animal-toro, solo la vaca
+        expect(repo.findAnimalById).toHaveBeenCalledTimes(1);
+      });
+
+      it('rechaza monta_natural con pajilla', async () => {
+        await expect(
+          service.create(
+            { ...dtoPajilla, tipo: TipoReproduccion.MONTA_NATURAL },
+            FINCA,
+          ),
+        ).rejects.toBeInstanceOf(BadRequestException);
+        expect(repo.create).not.toHaveBeenCalled();
+      });
+
+      it('rechaza inseminacion con toroId Y pajilla al mismo tiempo', async () => {
+        await expect(
+          service.create({ ...dtoPajilla, toroId: toro.id }, FINCA),
+        ).rejects.toBeInstanceOf(BadRequestException);
+        expect(repo.create).not.toHaveBeenCalled();
+      });
+
+      it('rechaza inseminacion sin toroId y sin pajilla', async () => {
+        await expect(
+          service.create(
+            { vacaId: vaca.id, tipo: TipoReproduccion.INSEMINACION, fecha: '2026-01-01' },
+            FINCA,
+          ),
+        ).rejects.toBeInstanceOf(BadRequestException);
+        expect(repo.create).not.toHaveBeenCalled();
+      });
+
+      it('rechaza pajilla incompleta (solo proveedor, sin raza)', async () => {
+        await expect(
+          service.create(
+            { ...dtoPajilla, pajillaRaza: undefined },
+            FINCA,
+          ),
+        ).rejects.toBeInstanceOf(BadRequestException);
+        expect(repo.create).not.toHaveBeenCalled();
+      });
+    });
   });
 
   describe('confirmarParto', () => {

@@ -6,8 +6,10 @@ import {
   AnimalCreateRequestModel,
   AnimalDetailModel,
   AnimalFilterModel,
+  AnimalFotoRequestModel,
   AnimalMortalidadRequestModel,
   AnimalPesoRequestModel,
+  AnimalReactivarRequestModel,
   AnimalSummaryModel,
   AnimalUpdateRequestModel,
 } from '../models/animal';
@@ -49,5 +51,30 @@ export class AnimalService {
 
   registrarMortalidad(id: string, dto: AnimalMortalidadRequestModel): Observable<void> {
     return this.apiClient.post<void>(apiEndpoints.ANIMALES.REGISTER_MORTALIDAD, dto, { id });
+  }
+
+  reactivar(id: string, dto: AnimalReactivarRequestModel): Observable<AnimalDetailModel> {
+    return this.apiClient.patch<AnimalDetailModel>(apiEndpoints.ANIMALES.REACTIVAR, dto, { id });
+  }
+
+  solicitarReactivacion(
+    id: string,
+    dto: AnimalReactivarRequestModel,
+  ): Observable<{ mensaje: string }> {
+    return this.apiClient.post<{ mensaje: string }>(
+      apiEndpoints.ANIMALES.SOLICITAR_REACTIVACION,
+      dto,
+      { id },
+    );
+  }
+
+  actualizarFoto(id: string, dto: AnimalFotoRequestModel): Observable<void> {
+    return this.apiClient.patch<void>(apiEndpoints.ANIMALES.UPDATE_PHOTO, dto, { id });
+  }
+
+  subirFoto(id: string, archivo: File): Observable<{ fotoUrl: string }> {
+    const formData = new FormData();
+    formData.append('foto', archivo);
+    return this.apiClient.upload<{ fotoUrl: string }>(apiEndpoints.ANIMALES.UPLOAD_PHOTO, formData, { id });
   }
 }

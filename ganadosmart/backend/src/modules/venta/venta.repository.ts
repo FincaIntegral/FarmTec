@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntityManager, In, Repository } from 'typeorm';
 import { EstadoAnimal } from '../../shared/enums/estado-animal.enum';
 import { EstadoAprobacion } from '../../shared/enums/estado-aprobacion.enum';
+import { RolUsuario } from '../../shared/enums/rol-usuario.enum';
 import { TipoAprobacion } from '../../shared/enums/tipo-aprobacion.enum';
 import { Animal } from '../animal/entities/animal.entity';
 import { Venta } from './entities/venta.entity';
@@ -147,6 +148,12 @@ export class VentaRepository {
         .andWhere("created_at < NOW() - (:dias * INTERVAL '1 day')", {
           dias: diasEspera,
         })
+        // Las creadas por el administrador nunca se auto-aprueban por
+        // tiempo — siempre requieren resolución manual del dueño.
+        .andWhere(
+          'creado_por NOT IN (SELECT id FROM usuario WHERE rol = :rolAdmin)',
+          { rolAdmin: RolUsuario.ADMINISTRADOR_FINCA },
+        )
         .returning('animal_id')
         .execute();
 

@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { EstadoAnimal } from '../../shared/enums/estado-animal.enum';
 import { EstadoAprobacion } from '../../shared/enums/estado-aprobacion.enum';
+import { RolUsuario } from '../../shared/enums/rol-usuario.enum';
 import { TipoAprobacion } from '../../shared/enums/tipo-aprobacion.enum';
 import { AlertaService } from '../alerta/alerta.service';
 import { ConfiguracionService } from '../configuracion/configuracion.service';
@@ -51,7 +52,7 @@ describe('VentaService', () => {
 
   describe('create — auto-aprobación por monto (leída de configuracion)', () => {
     it('monto bajo el umbral → aprobado/por_monto/auto_aprobado=true', async () => {
-      const venta = await service.create(dtoBase, FINCA, 'user-1');
+      const venta = await service.create(dtoBase, FINCA, 'user-1', RolUsuario.DUENO_FINCA);
 
       expect(venta.estadoAprobacion).toBe(EstadoAprobacion.APROBADO);
       expect(venta.tipoAprobacion).toBe(TipoAprobacion.POR_MONTO);
@@ -65,6 +66,7 @@ describe('VentaService', () => {
         { ...dtoBase, monto: 500000 },
         FINCA,
         'user-1',
+        RolUsuario.DUENO_FINCA,
       );
       expect(venta.estadoAprobacion).toBe(EstadoAprobacion.PENDIENTE);
       expect(venta.tipoAprobacion).toBe(TipoAprobacion.PENDIENTE);
@@ -78,7 +80,12 @@ describe('VentaService', () => {
         montoUmbralAuto: null,
       } as ConfiguracionAprobacion);
 
-      const venta = await service.create({ ...dtoBase, monto: 1 }, FINCA, 'u');
+      const venta = await service.create(
+        { ...dtoBase, monto: 1 },
+        FINCA,
+        'u',
+        RolUsuario.DUENO_FINCA,
+      );
       expect(venta.estadoAprobacion).toBe(EstadoAprobacion.PENDIENTE);
     });
 
@@ -88,14 +95,19 @@ describe('VentaService', () => {
         aplicaAVentas: false,
       } as ConfiguracionAprobacion);
 
-      const venta = await service.create(dtoBase, FINCA, 'u');
+      const venta = await service.create(dtoBase, FINCA, 'u', RolUsuario.DUENO_FINCA);
       expect(venta.autoAprobado).toBe(false);
     });
 
     it('animalId de otra finca → 400', async () => {
       repo.findAnimalById.mockResolvedValue(null);
       await expect(
-        service.create({ ...dtoBase, animalId: 'ajeno' }, FINCA, 'u'),
+        service.create(
+          { ...dtoBase, animalId: 'ajeno' },
+          FINCA,
+          'u',
+          RolUsuario.DUENO_FINCA,
+        ),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
@@ -106,9 +118,29 @@ describe('VentaService', () => {
         estado: EstadoAnimal.VENDIDO,
       } as Animal);
       await expect(
-        service.create({ ...dtoBase, animalId: 'animal-1' }, FINCA, 'u'),
+        service.create(
+          { ...dtoBase, animalId: 'animal-1' },
+          FINCA,
+          'u',
+          RolUsuario.DUENO_FINCA,
+        ),
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(repo.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('create — creada por administrador siempre requiere aprobación del dueño', () => {
+    it('monto bajo el umbral pero creada por admin → pendiente, no se auto-aprueba', async () => {
+      const venta = await service.create(
+        dtoBase,
+        FINCA,
+        'admin-1',
+        RolUsuario.ADMINISTRADOR_FINCA,
+      );
+      expect(venta.estadoAprobacion).toBe(EstadoAprobacion.PENDIENTE);
+      expect(venta.tipoAprobacion).toBe(TipoAprobacion.PENDIENTE);
+      expect(venta.autoAprobado).toBe(false);
+      expect(alertaService.crear).toHaveBeenCalled();
     });
   });
 

@@ -6,3 +6,5 @@ export * from './animal-create-request.model';
 export * from './animal-update-request.model';
 export * from './animal-peso-request.model';
 export * from './animal-mortalidad-request.model';
+export * from './animal-reactivar-request.model';
+export * from './animal-foto-request.model';

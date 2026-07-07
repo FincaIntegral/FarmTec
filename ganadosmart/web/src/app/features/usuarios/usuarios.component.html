@@ -1,0 +1,171 @@
+<div class="space-y-4">
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div>
+      <h1 class="text-xl font-black text-foreground font-heading">Usuarios</h1>
+      <p class="text-xs text-muted-foreground mt-0.5">{{ totalRegistros() }} usuarios en la finca</p>
+    </div>
+    <button
+      (click)="abrirModalInvitar()"
+      class="flex items-center gap-1.5 text-xs font-black bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg px-3 py-2 transition-all font-heading w-fit"
+    >
+      <svg lucidePlus [size]="11"></svg>Invitar usuario
+    </button>
+  </div>
+
+  <app-card class="p-4">
+    @if (error()) {
+      <p class="text-xs text-red-500 font-bold mb-3">{{ error() }}</p>
+    }
+
+    @if (cargando()) {
+      <p class="text-xs text-muted-foreground py-8 text-center">Cargando usuarios…</p>
+    } @else if (usuarios().length === 0) {
+      <p class="text-xs text-muted-foreground py-8 text-center">No hay usuarios registrados.</p>
+    } @else {
+      <div class="overflow-x-auto -mx-1">
+        <table class="w-full text-xs min-w-[680px]">
+          <thead>
+            <tr class="border-b border-border">
+              @for (h of ['Usuario', 'Rol', 'Estado', 'Último acceso', '']; track h) {
+                <th class="text-left text-[10px] font-black text-muted-foreground uppercase tracking-wider py-2.5 px-2 first:pl-0 last:pr-0 whitespace-nowrap font-heading">
+                  {{ h }}
+                </th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (u of usuarios(); track u.id) {
+              <tr class="border-b border-border/40">
+                <td class="py-2.5 px-2 first:pl-0">
+                  <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-full bg-muted border border-border flex items-center justify-center text-[10px] font-black text-foreground shrink-0 font-heading">
+                      {{ iniciales(u.nombre) }}
+                    </div>
+                    <div class="min-w-0">
+                      <p class="font-black text-foreground truncate">{{ u.nombre }}</p>
+                      <p class="text-muted-foreground truncate">{{ u.correo }}</p>
+                    </div>
+                  </div>
+                </td>
+                <td class="py-2.5 px-2">
+                  <app-badge [label]="rolLabel(u.rol)" [variant]="rolVariant(u.rol)" />
+                </td>
+                <td class="py-2.5 px-2">
+                  @if (u.activo) {
+                    <app-badge label="Activo" variant="green" />
+                  } @else {
+                    <app-badge label="Inactivo" variant="gray" />
+                  }
+                </td>
+                <td class="py-2.5 px-2 font-mono text-muted-foreground">
+                  {{ u.ultimoAcceso ? (u.ultimoAcceso | date: 'short') : 'Nunca' }}
+                </td>
+                <td class="py-2.5 px-2 last:pr-0 text-right">
+                  <button
+                    type="button"
+                    disabled
+                    title="Sin acciones disponibles — el backend solo permite invitar usuarios"
+                    class="text-muted-foreground/50 cursor-not-allowed p-1"
+                  >
+                    <svg lucideEllipsisVertical [size]="14"></svg>
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="mt-4 pt-4 border-t border-border flex items-center justify-between">
+        <span class="text-[10px] text-muted-foreground">{{ totalRegistros() }} usuarios</span>
+        @if (totalPaginas() > 1) {
+          <div class="flex items-center gap-2">
+            <button
+              (click)="irAPagina(pagina() - 1)"
+              [disabled]="pagina() <= 1"
+              class="text-[10px] font-bold text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+            >
+              Anterior
+            </button>
+            <span class="text-[10px] text-muted-foreground font-mono">{{ pagina() }} / {{ totalPaginas() }}</span>
+            <button
+              (click)="irAPagina(pagina() + 1)"
+              [disabled]="pagina() >= totalPaginas()"
+              class="text-[10px] font-bold text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+            >
+              Siguiente
+            </button>
+          </div>
+        }
+      </div>
+    }
+  </app-card>
+</div>
+
+@if (mostrarModalInvitar()) {
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" (click)="cerrarModalInvitar()">
+    <div class="bg-card border border-border rounded-xl p-5 w-full max-w-sm" (click)="$event.stopPropagation()">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-sm font-black text-foreground font-heading">Invitar usuario</h3>
+        <button (click)="cerrarModalInvitar()" class="text-muted-foreground hover:text-foreground">
+          <svg lucideX [size]="16"></svg>
+        </button>
+      </div>
+
+      <form [formGroup]="formInvitar" (ngSubmit)="invitar()" class="space-y-3">
+        <div>
+          <label class="block text-[10px] font-black text-muted-foreground mb-1 uppercase tracking-wider font-heading">Nombre *</label>
+          <input
+            formControlName="nombre"
+            class="w-full bg-muted border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/60"
+          />
+        </div>
+        <div>
+          <label class="block text-[10px] font-black text-muted-foreground mb-1 uppercase tracking-wider font-heading">Correo *</label>
+          <input
+            type="email"
+            formControlName="correo"
+            class="w-full bg-muted border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/60"
+          />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[10px] font-black text-muted-foreground mb-1 uppercase tracking-wider font-heading">Contraseña *</label>
+            <input
+              type="password"
+              formControlName="contrasena"
+              class="w-full bg-muted border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/60"
+            />
+          </div>
+          <div>
+            <label class="block text-[10px] font-black text-muted-foreground mb-1 uppercase tracking-wider font-heading">Rol *</label>
+            <select
+              formControlName="rol"
+              class="w-full bg-muted border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/60"
+            >
+              @for (r of roles; track r) {
+                <option [value]="r">{{ rolLabel(r) }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        @if (formInvitar.controls.contrasena.touched && formInvitar.controls.contrasena.errors?.['minlength']) {
+          <p class="text-[10px] text-amber-600 font-bold">La contraseña debe tener al menos 8 caracteres.</p>
+        }
+
+        @if (errorInvitar()) {
+          <p class="text-xs text-red-500 font-bold">{{ errorInvitar() }}</p>
+        }
+
+        <button
+          type="submit"
+          [disabled]="invitando()"
+          class="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-white font-black py-2.5 rounded-lg text-xs transition-all mt-2 font-heading"
+        >
+          {{ invitando() ? 'Invitando…' : 'Invitar usuario' }}
+        </button>
+      </form>
+    </div>
+  </div>
+}
