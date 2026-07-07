@@ -46,6 +46,7 @@ export const apiEndpoints = {
   REPORTES: {
     DASHBOARD: '/reportes/dashboard',
     INGRESOS_VS_GASTOS: '/reportes/ingresos-vs-gastos',
+    MORTALIDAD: '/reportes/mortalidad',
   },
   ALERTAS: {
     LIST: '/alertas',

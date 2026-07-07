@@ -16,7 +16,7 @@ export interface ApiConfig {
 }
 
 export const apiConfig: Readonly<ApiConfig> = {
-  baseUrl: 'http://localhost:3000/api/v1',
+  baseUrl: 'https://farmtec.fly.dev/api/v1',
   apiVersion: 'v1',
   timeout: 15000,
   defaultHeaders: {
