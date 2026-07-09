@@ -9,11 +9,14 @@ export class SupabaseStorageService {
   private readonly client: SupabaseClient;
 
   constructor(config: ConfigService) {
-    this.client = createClient(
-      config.get<string>('SUPABASE_URL')!,
-      config.get<string>('SUPABASE_SECRET_KEY')!,
-    );
-  }
+  const url = config.get<string>('SUPABASE_URL');
+  const key = config.get<string>('SUPABASE_SECRET_KEY');
+
+  console.log('SUPABASE_URL =>', JSON.stringify(url));
+  console.log('SUPABASE_SECRET_KEY existe =>', !!key);
+
+  this.client = createClient(url!, key!);
+}
 
   async subirFotoAnimal(
     fincaId: string,
