@@ -100,13 +100,14 @@ export class ReproduccionService {
           `El animal ${toro.codigo} es un becerro y no puede reproducirse`,
         );
       }
-      // El toro solo debe estar vivo para monta natural — la inseminación
-      // puede usar semen ya registrado de un toro fallecido o vendido.
+      // El toro debe estar activo (ni vendido ni muerto) en ambos casos.
       if (
-        dto.tipo === TipoReproduccion.MONTA_NATURAL &&
-        (toro.estado === EstadoAnimal.MUERTO || toro.estado === EstadoAnimal.VENDIDO)
+        toro.estado === EstadoAnimal.MUERTO ||
+        toro.estado === EstadoAnimal.VENDIDO
       ) {
-        throw new BadRequestException(`El animal ${toro.codigo} está ${toro.estado}`);
+        throw new BadRequestException(
+          `El toro ${toro.codigo} está ${toro.estado} y no puede reproducirse`,
+        );
       }
     }
 

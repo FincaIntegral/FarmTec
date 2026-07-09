@@ -5,6 +5,9 @@ export const apiEndpoints = {
   USUARIOS: {
     LIST: '/usuarios',
     CREATE: '/usuarios',
+    DESACTIVAR: (id: string): string => `/usuarios/${id}/desactivar`,
+    REACTIVAR: (id: string): string => `/usuarios/${id}/reactivar`,
+    CAMBIAR_PASSWORD: (id: string): string => `/usuarios/${id}/password`,
   },
   CONFIGURACION: {
     APROBACION: '/configuracion/aprobacion',
@@ -47,6 +50,7 @@ export const apiEndpoints = {
     DASHBOARD: '/reportes/dashboard',
     INGRESOS_VS_GASTOS: '/reportes/ingresos-vs-gastos',
     MORTALIDAD: '/reportes/mortalidad',
+    ACTIVIDAD: '/reportes/actividad',
   },
   ALERTAS: {
     LIST: '/alertas',

@@ -1,10 +1,11 @@
-import { Body, Controller, Get, HttpCode, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, Patch, Post, Query } from '@nestjs/common';
 import { CurrentUser } from '../../shared/decorators/current-user.decorator';
 import { Public } from '../../shared/decorators/public.decorator';
 import { Roles } from '../../shared/decorators/roles.decorator';
 import { PaginacionQueryDto } from '../../shared/dto/paginacion-query.dto';
 import { RolUsuario } from '../../shared/enums/rol-usuario.enum';
 import type { JwtPayload } from '../../shared/interfaces/jwt-payload.interface';
+import { CambiarContrasenaDto } from './dto/cambiar-contrasena.dto';
 import { CrearUsuarioDto } from './dto/create-usuario.dto';
 import { LoginDto } from './dto/login.dto';
 import { UsuarioService } from './usuario.service';
@@ -33,5 +34,33 @@ export class UsuarioController {
   @Post('usuarios')
   create(@Body() dto: CrearUsuarioDto, @CurrentUser() usuario: JwtPayload) {
     return this.usuarioService.create(dto, usuario.fincaId);
+  }
+
+  @Roles(RolUsuario.DUENO_FINCA)
+  @Patch('usuarios/:id/desactivar')
+  desactivar(
+    @Param('id') usuarioId: string,
+    @CurrentUser() usuario: JwtPayload,
+  ) {
+    return this.usuarioService.desactivar(usuarioId, usuario);
+  }
+
+  @Roles(RolUsuario.DUENO_FINCA)
+  @Patch('usuarios/:id/reactivar')
+  reactivar(
+    @Param('id') usuarioId: string,
+    @CurrentUser() usuario: JwtPayload,
+  ) {
+    return this.usuarioService.reactivar(usuarioId, usuario);
+  }
+
+  @Roles(RolUsuario.DUENO_FINCA)
+  @Patch('usuarios/:id/password')
+  cambiarContrasena(
+    @Param('id') usuarioId: string,
+    @Body() dto: CambiarContrasenaDto,
+    @CurrentUser() usuario: JwtPayload,
+  ) {
+    return this.usuarioService.cambiarContrasena(usuarioId, dto, usuario);
   }
 }

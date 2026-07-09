@@ -48,18 +48,17 @@ export class ReproduccionComponent {
   readonly filtrosEstado: FiltroEstado[] = ['Todos', 'en_curso', 'exitoso', 'fallido'];
 
   // Un becerro todavía no está en edad reproductiva, y un animal muerto o
-  // vendido no puede iniciar un evento nuevo — se excluyen de ambos selects
-  // (usados solo para "Nuevo registro"). El lookup de código (codigoAnimal)
-  // sí necesita TODOS los animales, incluyendo los ya muertos/vendidos, para
-  // no mostrar el UUID crudo en filas históricas.
+  // vendido no puede iniciar un evento reproductivo — se excluyen de ambos selects.
+  // El lookup de código (codigoAnimal) sí necesita TODOS los animales,
+  // incluyendo los ya muertos/vendidos, para no mostrar el UUID crudo en filas históricas.
   readonly toros = computed(() =>
     this.animales().filter(
-      (a) => a.categoria === 'toro' && (a.estado === 'activo' || a.estado === 'en_tratamiento'),
+      (a) => a.categoria === 'toro' && a.estado === 'activo',
     ),
   );
   readonly vacas = computed(() =>
     this.animales().filter(
-      (a) => a.categoria === 'vaca' && (a.estado === 'activo' || a.estado === 'en_tratamiento'),
+      (a) => a.categoria === 'vaca' && a.estado === 'activo',
     ),
   );
 

@@ -213,12 +213,30 @@
           />
         </div>
         <div>
-          <label class="block text-[10px] font-black text-muted-foreground mb-1 uppercase tracking-wider font-heading">Causa *</label>
-          <input
-            formControlName="causa"
+          <label class="block text-[10px] font-black text-muted-foreground mb-1 uppercase tracking-wider font-heading">Causa de mortalidad *</label>
+          <select
+            formControlName="causaPredefinida"
             class="w-full bg-muted border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none focus:border-amber-500/60"
-          />
+          >
+            <option value="">Selecciona una causa</option>
+            @for (causa of causasMortalidad; track causa) {
+              <option [value]="causa">{{ causa }}</option>
+            }
+          </select>
         </div>
+
+        @if (formMortalidad.controls.causaPredefinida.value === 'Otra causa') {
+          <div>
+            <label class="block text-[10px] font-black text-muted-foreground mb-1 uppercase tracking-wider font-heading">Especifica la causa *</label>
+            <input
+              type="text"
+              formControlName="causaOtra"
+              placeholder="Ej. enfermedad desconocida"
+              class="w-full bg-muted border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none focus:border-amber-500/60"
+            />
+          </div>
+        }
+
         @if (errorMortalidad()) {
           <p class="text-xs text-red-500 font-bold">{{ errorMortalidad() }}</p>
         }

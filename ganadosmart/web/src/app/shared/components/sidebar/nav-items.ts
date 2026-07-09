@@ -1,6 +1,7 @@
 import type { LucideIconData } from '@lucide/angular';
 import {
   LucideHeart,
+  LucideHistory,
   LucideLayoutDashboard,
   LucideMapPin,
   LucideReceipt,
@@ -35,6 +36,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { path: 'ventas', label: 'Ventas', icon: LucideShoppingCart.icon, roles: ['dueno_finca', 'administrador_finca'] },
   { path: 'gastos', label: 'Gastos', icon: LucideReceipt.icon, roles: ['dueno_finca', 'administrador_finca'] },
   { path: 'mortalidad', label: 'Mortalidad', icon: LucideSkull.icon, roles: TODOS_LOS_ROLES },
+  { path: 'historial', label: 'Historial', icon: LucideHistory.icon, roles: ['dueno_finca'] },
   { path: 'usuarios', label: 'Usuarios', icon: LucideUsers.icon, roles: ['dueno_finca'] },
 ] as const;
 

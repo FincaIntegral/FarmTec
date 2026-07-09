@@ -110,9 +110,22 @@ export class DetalleComponent implements OnInit {
   readonly mostrarModalMortalidad = signal(false);
   readonly registrandoMortalidad = signal(false);
   readonly errorMortalidad = signal<string | null>(null);
+
+  readonly causasMortalidad = [
+    'Enfermedad respiratoria',
+    'Distocia (complicación de parto)',
+    'Parasitosis',
+    'Timpanismo (empaste)',
+    'Ataque de depredador',
+    'Trauma / accidente',
+    'Perinatal',
+    'Otra causa',
+  ];
+
   readonly formMortalidad = this.fb.nonNullable.group({
     fecha: [this.hoy(), Validators.required],
-    causa: ['', Validators.required],
+    causaPredefinida: ['', Validators.required],
+    causaOtra: [''],
   });
 
   // ── Modal: reactivar (mortalidad registrada por error) ──
@@ -200,7 +213,7 @@ export class DetalleComponent implements OnInit {
   }
 
   abrirModalMortalidad(): void {
-    this.formMortalidad.reset({ fecha: this.hoy(), causa: '' });
+    this.formMortalidad.reset({ fecha: this.hoy(), causaPredefinida: '', causaOtra: '' });
     this.errorMortalidad.set(null);
     this.mostrarModalMortalidad.set(true);
   }
@@ -215,19 +228,31 @@ export class DetalleComponent implements OnInit {
       this.formMortalidad.markAllAsTouched();
       return;
     }
+
+    const valores = this.formMortalidad.getRawValue();
+    const causa =
+      valores.causaPredefinida === 'Otra causa' ? valores.causaOtra : valores.causaPredefinida;
+
+    if (!causa) {
+      this.errorMortalidad.set('Ingresa la causa de mortalidad');
+      return;
+    }
+
     this.registrandoMortalidad.set(true);
     this.errorMortalidad.set(null);
-    this.animalService.registrarMortalidad(animal.id, this.formMortalidad.getRawValue()).subscribe({
-      next: () => {
-        this.registrandoMortalidad.set(false);
-        this.mostrarModalMortalidad.set(false);
-        this.cargar(animal.id);
-      },
-      error: (err: { message?: string }) => {
-        this.registrandoMortalidad.set(false);
-        this.errorMortalidad.set(err?.message ?? 'No se pudo registrar la mortalidad');
-      },
-    });
+    this.animalService
+      .registrarMortalidad(animal.id, { fecha: valores.fecha, causa })
+      .subscribe({
+        next: () => {
+          this.registrandoMortalidad.set(false);
+          this.mostrarModalMortalidad.set(false);
+          this.cargar(animal.id);
+        },
+        error: (err: { message?: string }) => {
+          this.registrandoMortalidad.set(false);
+          this.errorMortalidad.set(err?.message ?? 'No se pudo registrar la mortalidad');
+        },
+      });
   }
 
   abrirModalReactivar(): void {

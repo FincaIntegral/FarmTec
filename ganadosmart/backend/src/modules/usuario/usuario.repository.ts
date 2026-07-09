@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { RolUsuario } from '../../shared/enums/rol-usuario.enum';
 import { Usuario } from './entities/usuario.entity';
 
 @Injectable()
@@ -45,5 +46,43 @@ export class UsuarioRepository {
 
   async actualizarUltimoAcceso(id: string): Promise<void> {
     await this.repo.update({ id }, { ultimoAcceso: new Date() });
+  }
+
+  async desactivar(id: string, fincaId: string): Promise<Usuario | null> {
+    await this.repo.update(
+      { id, fincaId },
+      { activo: false },
+    );
+    return this.repo.findOne({ where: { id, fincaId } });
+  }
+
+  async reactivar(id: string, fincaId: string): Promise<Usuario | null> {
+    await this.repo.update(
+      { id, fincaId },
+      { activo: true },
+    );
+    return this.repo.findOne({ where: { id, fincaId } });
+  }
+
+  async actualizarContrasena(
+    id: string,
+    fincaId: string,
+    contrasenaHash: string,
+  ): Promise<Usuario | null> {
+    await this.repo.update(
+      { id, fincaId },
+      { contrasenaHash },
+    );
+    return this.repo.findOne({ where: { id, fincaId } });
+  }
+
+  countDueñosActivos(fincaId: string): Promise<number> {
+    return this.repo.count({
+      where: {
+        fincaId,
+        rol: RolUsuario.DUENO_FINCA,
+        activo: true,
+      },
+    });
   }
 }

@@ -1,7 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { LucideEllipsisVertical, LucidePlus, LucideX } from '@lucide/angular';
+import { LucideEllipsisVertical, LucidePlus, LucideX, LucideAlertCircle } from '@lucide/angular';
 import { RolUsuario } from '../../core/models/domain-types';
 import { UsuarioDetailModel } from '../../core/models/usuario';
 import { UsuarioService } from '../../core/services/usuario.service';
@@ -36,6 +36,7 @@ const ROLES: RolUsuario[] = ['dueno_finca', 'administrador_finca', 'veterinario'
     LucidePlus,
     LucideX,
     LucideEllipsisVertical,
+    LucideAlertCircle,
   ],
   templateUrl: './usuarios.component.html',
 })
@@ -56,11 +57,25 @@ export class UsuariosComponent {
   readonly invitando = signal(false);
   readonly errorInvitar = signal<string | null>(null);
 
+  readonly mostrarModalCambiarPassword = signal(false);
+  readonly usuarioSeleccionado = signal<UsuarioDetailModel | null>(null);
+  readonly cambiandoPassword = signal(false);
+  readonly errorPassword = signal<string | null>(null);
+
+  readonly mostrarModalAccion = signal(false);
+  readonly accion = signal<'desactivar' | 'reactivar' | null>(null);
+  readonly procesandoAccion = signal(false);
+  readonly errorAccion = signal<string | null>(null);
+
   readonly formInvitar = this.fb.nonNullable.group({
     nombre: ['', Validators.required],
     correo: ['', [Validators.required, Validators.email]],
     contrasena: ['', [Validators.required, Validators.minLength(8)]],
     rol: ['veterinario' as RolUsuario, Validators.required],
+  });
+
+  readonly formPassword = this.fb.nonNullable.group({
+    nuevaContrasena: ['', [Validators.required, Validators.minLength(8)]],
   });
 
   constructor() {
@@ -131,6 +146,93 @@ export class UsuariosComponent {
       error: (err: { message?: string }) => {
         this.invitando.set(false);
         this.errorInvitar.set(err?.message ?? 'No se pudo invitar al usuario');
+      },
+    });
+  }
+
+  abrirMenuOpciones(usuario: UsuarioDetailModel, event: Event): void {
+    event.stopPropagation();
+  }
+
+  abrirModalCambiarPassword(usuario: UsuarioDetailModel): void {
+    this.usuarioSeleccionado.set(usuario);
+    this.formPassword.reset({ nuevaContrasena: '' });
+    this.errorPassword.set(null);
+    this.mostrarModalCambiarPassword.set(true);
+  }
+
+  cerrarModalCambiarPassword(): void {
+    this.mostrarModalCambiarPassword.set(false);
+    this.usuarioSeleccionado.set(null);
+  }
+
+  cambiarPassword(): void {
+    if (this.formPassword.invalid || !this.usuarioSeleccionado()) {
+      this.formPassword.markAllAsTouched();
+      return;
+    }
+    this.cambiandoPassword.set(true);
+    this.errorPassword.set(null);
+    this.usuarioService.cambiarContrasena(
+      this.usuarioSeleccionado()!.id,
+      this.formPassword.getRawValue(),
+    ).subscribe({
+      next: () => {
+        this.cambiandoPassword.set(false);
+        this.mostrarModalCambiarPassword.set(false);
+        this.cargar();
+      },
+      error: (err: { message?: string }) => {
+        this.cambiandoPassword.set(false);
+        this.errorPassword.set(err?.message ?? 'No se pudo cambiar la contraseña');
+      },
+    });
+  }
+
+  abrirModalDesactivar(usuario: UsuarioDetailModel): void {
+    this.usuarioSeleccionado.set(usuario);
+    this.accion.set('desactivar');
+    this.errorAccion.set(null);
+    this.mostrarModalAccion.set(true);
+  }
+
+  abrirModalReactivar(usuario: UsuarioDetailModel): void {
+    this.usuarioSeleccionado.set(usuario);
+    this.accion.set('reactivar');
+    this.errorAccion.set(null);
+    this.mostrarModalAccion.set(true);
+  }
+
+  cerrarModalAccion(): void {
+    this.mostrarModalAccion.set(false);
+    this.usuarioSeleccionado.set(null);
+    this.accion.set(null);
+  }
+
+  ejecutarAccion(): void {
+    if (!this.usuarioSeleccionado() || !this.accion()) {
+      return;
+    }
+
+    this.procesandoAccion.set(true);
+    this.errorAccion.set(null);
+
+    const usuarioId = this.usuarioSeleccionado()!.id;
+    const acc = this.accion()!;
+
+    const request = acc === 'desactivar'
+      ? this.usuarioService.desactivar(usuarioId)
+      : this.usuarioService.reactivar(usuarioId);
+
+    request.subscribe({
+      next: () => {
+        this.procesandoAccion.set(false);
+        this.mostrarModalAccion.set(false);
+        this.cargar();
+      },
+      error: (err: { message?: string }) => {
+        this.procesandoAccion.set(false);
+        this.errorAccion.set(err?.message ?? `No se pudo ${acc} el usuario`);
       },
     });
   }
