@@ -60,6 +60,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   });
 
   readonly ingresosFormato = computed(() => FORMATO_MONEDA.format(this.datos()?.ingresosMes ?? 0));
+  readonly valorEstimadoHatoFormato = computed(() => FORMATO_MONEDA.format(this.datos()?.valorEstimadoHato ?? 0));
 
   private intervalo?: ReturnType<typeof setInterval>;
 
