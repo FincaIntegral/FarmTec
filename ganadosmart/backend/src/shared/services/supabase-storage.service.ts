@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import WebSocket from 'ws';
 
 const BUCKET_ANIMAL_FOTOS = 'animal-fotos';
 
@@ -9,10 +10,18 @@ export class SupabaseStorageService {
   private readonly client: SupabaseClient;
 
   constructor(config: ConfigService) {
-    this.client = createClient(
-      config.get<string>('NEXT_PUBLIC_SUPABASE_URL')!,
-      config.get<string>('SUPABASE_SECRET_KEY')!,
-    );
+    const url = config.get<string>('supabaseUrl');
+    const key = config.get<string>('SUPABASE_SECRET_KEY');
+
+    // El proyecto usa Supabase solo para Storage; Realtime no se usa. Pero
+    // supabase-js 2.110 inicializa Realtime sí o sí, y Node 20 no trae
+    // WebSocket global. Proveemos `ws` vía `transport` para que el cliente
+    // pueda construirse en el servidor (sin suscripciones no hay conexión).
+    this.client = createClient(url!, key!, {
+      realtime: {
+        transport: WebSocket as unknown as import('@supabase/realtime-js').WebSocketLikeConstructor,
+      },
+    });
   }
 
   async subirFotoAnimal(
