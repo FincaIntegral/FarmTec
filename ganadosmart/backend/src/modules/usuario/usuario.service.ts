@@ -1,6 +1,8 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -10,6 +12,7 @@ import {
   PaginatedResponse,
 } from '../../shared/dto/paginacion-meta.dto';
 import { JwtPayload } from '../../shared/interfaces/jwt-payload.interface';
+import { CambiarContrasenaDto } from './dto/cambiar-contrasena.dto';
 import { CrearUsuarioDto } from './dto/create-usuario.dto';
 import { LoginDto } from './dto/login.dto';
 import { UsuarioResponse } from './dto/usuario-response.dto';
@@ -92,5 +95,101 @@ export class UsuarioService {
     });
 
     return UsuarioResponse.fromEntity(usuario);
+  }
+
+  async desactivar(
+    usuarioId: string,
+    usuarioActual: JwtPayload,
+  ): Promise<UsuarioResponse> {
+    if (usuarioId === usuarioActual.sub) {
+      throw new BadRequestException(
+        'No puedes desactivarte a ti mismo',
+      );
+    }
+
+    const usuario = await this.usuarioRepository.findById(
+      usuarioId,
+      usuarioActual.fincaId,
+    );
+    if (!usuario) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    if (usuario.rol === 'dueno_finca' && usuario.activo) {
+      const dueñosActivos = await this.usuarioRepository.countDueñosActivos(
+        usuarioActual.fincaId,
+      );
+      if (dueñosActivos === 1) {
+        throw new ConflictException(
+          'La finca debe tener al menos un dueño activo',
+        );
+      }
+    }
+
+    const usuarioDesactivado = await this.usuarioRepository.desactivar(
+      usuarioId,
+      usuarioActual.fincaId,
+    );
+
+    if (!usuarioDesactivado) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    return UsuarioResponse.fromEntity(usuarioDesactivado);
+  }
+
+  async reactivar(
+    usuarioId: string,
+    usuarioActual: JwtPayload,
+  ): Promise<UsuarioResponse> {
+    const usuario = await this.usuarioRepository.findById(
+      usuarioId,
+      usuarioActual.fincaId,
+    );
+    if (!usuario) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    const usuarioReactivado = await this.usuarioRepository.reactivar(
+      usuarioId,
+      usuarioActual.fincaId,
+    );
+
+    if (!usuarioReactivado) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    return UsuarioResponse.fromEntity(usuarioReactivado);
+  }
+
+  async cambiarContrasena(
+    usuarioId: string,
+    dto: CambiarContrasenaDto,
+    usuarioActual: JwtPayload,
+  ): Promise<UsuarioResponse> {
+    const usuario = await this.usuarioRepository.findById(
+      usuarioId,
+      usuarioActual.fincaId,
+    );
+    if (!usuario) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    const contrasenaHash = await bcrypt.hash(
+      dto.nuevaContrasena,
+      SALT_ROUNDS,
+    );
+
+    const usuarioActualizado = await this.usuarioRepository.actualizarContrasena(
+      usuarioId,
+      usuarioActual.fincaId,
+      contrasenaHash,
+    );
+
+    if (!usuarioActualizado) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    return UsuarioResponse.fromEntity(usuarioActualizado);
   }
 }
