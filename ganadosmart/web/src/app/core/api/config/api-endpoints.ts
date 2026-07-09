@@ -5,6 +5,9 @@ export const apiEndpoints = {
   USUARIOS: {
     LIST: '/usuarios',
     CREATE: '/usuarios',
+    DESACTIVAR: (id: string): string => `/usuarios/${id}/desactivar`,
+    REACTIVAR: (id: string): string => `/usuarios/${id}/reactivar`,
+    CAMBIAR_PASSWORD: (id: string): string => `/usuarios/${id}/password`,
   },
   CONFIGURACION: {
     APROBACION: '/configuracion/aprobacion',

@@ -26,4 +26,28 @@ export class UsuarioService {
   crear(dto: UsuarioCreateRequestModel): Observable<UsuarioDetailModel> {
     return this.apiClient.post<UsuarioDetailModel>(apiEndpoints.USUARIOS.CREATE, dto);
   }
+
+  cambiarContrasena(
+    usuarioId: string,
+    dto: { nuevaContrasena: string },
+  ): Observable<UsuarioDetailModel> {
+    return this.apiClient.patch<UsuarioDetailModel>(
+      apiEndpoints.USUARIOS.CAMBIAR_PASSWORD(usuarioId),
+      dto,
+    );
+  }
+
+  desactivar(usuarioId: string): Observable<UsuarioDetailModel> {
+    return this.apiClient.patch<UsuarioDetailModel>(
+      apiEndpoints.USUARIOS.DESACTIVAR(usuarioId),
+      {},
+    );
+  }
+
+  reactivar(usuarioId: string): Observable<UsuarioDetailModel> {
+    return this.apiClient.patch<UsuarioDetailModel>(
+      apiEndpoints.USUARIOS.REACTIVAR(usuarioId),
+      {},
+    );
+  }
 }
