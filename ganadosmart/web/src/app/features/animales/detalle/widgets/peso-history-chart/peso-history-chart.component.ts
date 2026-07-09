@@ -15,6 +15,7 @@ const PADDING = 24;
   templateUrl: './peso-history-chart.component.html',
 })
 export class PesoHistoryChartComponent {
+  readonly ALTO = ALTO;
   readonly historial = input.required<PuntoHistorial[]>();
 
   readonly viewBox = `0 0 ${ANCHO} ${ALTO}`;
