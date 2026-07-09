@@ -37,19 +37,10 @@ export function buildParams(
 }
 
 export interface HttpRequestOptions {
-  readonly headers?: HttpHeaders;
-  readonly params?: HttpParams;
+  readonly headers?: Readonly<Record<string, string | undefined>>;
+  readonly params?: Readonly<Record<string, unknown>>;
   readonly observe?: 'body';
-  readonly responseType?: 'json';
+  readonly responseType?: 'json' | 'blob' | 'text' | 'arraybuffer';
   readonly withCredentials?: boolean;
-}
-
-export function buildRequestOptions(
-  overrides?: Readonly<HttpRequestOptions>
-): HttpRequestOptions {
-  return {
-    observe: 'body',
-    responseType: 'json',
-    ...overrides,
-  };
+  readonly reportProgress?: boolean;
 }

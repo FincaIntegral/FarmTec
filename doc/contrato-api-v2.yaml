@@ -136,7 +136,7 @@ components:
 
     TipoOrigenAlerta:
       type: string
-      enum: [animal, venta, gasto]
+      enum: [animal, venta, gasto, potrero]
 
     SeveridadAlerta:
       type: string
@@ -303,7 +303,13 @@ components:
       properties:
         id:                  { type: string, format: uuid }
         fincaId:             { type: string, format: uuid }
-        toroId:              { type: string, format: uuid }
+        toroId:
+          type: string
+          format: uuid
+          nullable: true
+          description: "NULL cuando la inseminación fue con pajilla externa (ver pajillaProveedor/pajillaRaza)"
+        pajillaProveedor:    { type: string, nullable: true }
+        pajillaRaza:         { type: string, nullable: true }
         vacaId:              { type: string, format: uuid }
         tipo:                { $ref: '#/components/schemas/TipoReproduccion' }
         fecha:               { type: string, format: date }
@@ -412,6 +418,7 @@ components:
       type: object
       properties:
         totalAnimales:        { type: integer }
+        animalesMuertos:      { type: integer, description: "Total histórico de animales con estado='muerto' (no solo últimos 12 meses)" }
         vacas:                { type: integer }
         toros:                { type: integer }
         becerros:             { type: integer }
@@ -730,7 +737,10 @@ paths:
   /animales/{id}/mortalidad:
     post:
       tags: [Animales]
-      summary: Registrar mortalidad — cambia estado a muerto, no reversible
+      summary: >
+        Registrar mortalidad — cambia estado a muerto. Solo puede revertirse
+        vía PATCH /animales/{id}/reactivar (exclusivo del Dueño, para casos
+        de error de registro).
       parameters:
         - $ref: '#/components/parameters/IdPath'
       requestBody:
@@ -747,6 +757,80 @@ paths:
         '200':
           description: Mortalidad registrada, estado del animal cambiado a muerto
         '409': { $ref: '#/components/responses/ConflictoDeEstado' }
+
+  /animales/{id}/reactivar:
+    patch:
+      tags: [Animales]
+      summary: >
+        Reactivar animal marcado como muerto por error — exclusivo del Dueño
+        de finca. Borra el registro de mortalidad asociado; el animal vuelve
+        a estado 'activo' y puede registrar mortalidad de nuevo en el futuro
+        si vuelve a fallecer.
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [motivo]
+              properties:
+                motivo:
+                  type: string
+                  description: "Por qué la mortalidad fue un error (obligatorio)"
+      responses:
+        '200':
+          description: Animal reactivado — estado vuelve a 'activo'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AnimalResponse' }
+        '403': { $ref: '#/components/responses/Prohibido' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+        '409':
+          description: El animal no está en estado 'muerto' — no hay nada que reactivar
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /animales/{id}/solicitar-reactivacion:
+    post:
+      tags: [Animales]
+      summary: >
+        El administrador de finca solicita reactivar un animal marcado muerto
+        por error — exclusivo de administrador_finca. NO cambia el estado del
+        animal: solo genera una alerta notificando al Dueño, quien debe
+        revisarla y ejecutar PATCH /animales/{id}/reactivar él mismo si está
+        de acuerdo. El dueño sigue siendo el único que puede reactivar.
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [motivo]
+              properties:
+                motivo:
+                  type: string
+                  description: "Por qué la mortalidad fue un error (obligatorio)"
+      responses:
+        '201':
+          description: Solicitud enviada — el animal sigue muerto hasta que el dueño la apruebe
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  mensaje: { type: string }
+        '403': { $ref: '#/components/responses/Prohibido' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+        '409':
+          description: El animal no está en estado 'muerto' — no hay nada que reactivar
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
 
   /animales/{id}/foto:
     patch:
@@ -766,6 +850,37 @@ paths:
       responses:
         '200':
           description: Foto actualizada
+
+  /animales/{id}/foto/upload:
+    post:
+      tags: [Animales]
+      summary: >
+        Alternativa a PATCH .../foto — sube un archivo de imagen (multipart)
+        directamente a Supabase Storage y guarda la URL pública resultante.
+        Máximo 5MB, solo JPEG/PNG/WEBP.
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [foto]
+              properties:
+                foto: { type: string, format: binary }
+      responses:
+        '201':
+          description: Foto subida — devuelve la URL pública resultante
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  fotoUrl: { type: string }
+        '400': { $ref: '#/components/responses/SolicitudInvalida' }
+        '403': { $ref: '#/components/responses/Prohibido' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
 
   # ──────────────────────────────────────────
   # MODULO 5 — REPRODUCCION
@@ -796,16 +911,30 @@ paths:
 
     post:
       tags: [Reproduccion]
-      summary: Registrar monta o inseminación — Dueño, Administrador o Veterinario
+      summary: >
+        Registrar monta o inseminación — Dueño, Administrador o Veterinario.
+        monta_natural requiere toroId (monta física, siempre un toro propio
+        de la finca). inseminacion admite EXACTAMENTE una de dos opciones:
+        toroId (semen propio) O pajillaProveedor+pajillaRaza juntos (semen
+        externo comprado como pajilla, sin toro propio involucrado).
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [toroId, vacaId, tipo, fecha]
+              required: [vacaId, tipo, fecha]
               properties:
-                toroId: { type: string, format: uuid }
+                toroId:
+                  type: string
+                  format: uuid
+                  description: "Requerido si tipo=monta_natural. Para inseminacion, alternativa a pajillaProveedor+pajillaRaza."
+                pajillaProveedor:
+                  type: string
+                  description: "Solo para inseminacion sin toroId — proveedor de la pajilla externa"
+                pajillaRaza:
+                  type: string
+                  description: "Solo para inseminacion sin toroId — raza del toro de la pajilla externa"
                 vacaId: { type: string, format: uuid }
                 tipo:   { $ref: '#/components/schemas/TipoReproduccion' }
                 fecha:  { type: string, format: date }
@@ -1147,6 +1276,31 @@ paths:
               schema: { $ref: '#/components/schemas/IngresosVsGastosResponse' }
         '403': { $ref: '#/components/responses/Prohibido' }
 
+  /reportes/mortalidad:
+    get:
+      tags: [Reportes]
+      summary: >
+        Registros de mortalidad de la finca (un ítem por animal muerto) con
+        fecha, causa, categoría y código del animal — datos que viven en la
+        tabla mortalidad, no en animal. Alimenta la pantalla de Mortalidad
+        (KPIs, barras mensuales por categoría, torta de causas).
+        Disponible a todos los roles autenticados, igual que GET /animales.
+      responses:
+        '200':
+          description: Lista completa (sin paginar) de registros de mortalidad
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    animalId:  { type: string, format: uuid }
+                    codigo:    { type: string }
+                    categoria: { $ref: '#/components/schemas/CategoriaAnimal' }
+                    fecha:     { type: string, format: date }
+                    causa:     { type: string }
+
   # ──────────────────────────────────────────
   # MODULO 10 — ALERTAS
   # ──────────────────────────────────────────
@@ -1257,6 +1411,6 @@ tags:
   - name: Reportes
     description: Dashboard y reporte financiero — solo lectura
   - name: Alertas
-    description: Notificaciones de origen animal, venta o gasto
+    description: Notificaciones de origen animal, venta, gasto o potrero
   - name: Sincronizacion
     description: Cola offline del móvil y resolución de conflictos

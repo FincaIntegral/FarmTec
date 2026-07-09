@@ -15,7 +15,10 @@ export const apiEndpoints = {
     DETAIL: (id: string): string => `/animales/${id}`,
     REGISTER_WEIGHT: (id: string): string => `/animales/${id}/peso`,
     REGISTER_MORTALIDAD: (id: string): string => `/animales/${id}/mortalidad`,
+    REACTIVAR: (id: string): string => `/animales/${id}/reactivar`,
+    SOLICITAR_REACTIVACION: (id: string): string => `/animales/${id}/solicitar-reactivacion`,
     UPDATE_PHOTO: (id: string): string => `/animales/${id}/foto`,
+    UPLOAD_PHOTO: (id: string): string => `/animales/${id}/foto/upload`,
   },
   REPRODUCCION: {
     LIST: '/reproducciones',
@@ -43,6 +46,7 @@ export const apiEndpoints = {
   REPORTES: {
     DASHBOARD: '/reportes/dashboard',
     INGRESOS_VS_GASTOS: '/reportes/ingresos-vs-gastos',
+    MORTALIDAD: '/reportes/mortalidad',
   },
   ALERTAS: {
     LIST: '/alertas',
@@ -53,15 +57,3 @@ export const apiEndpoints = {
     RESOLVER_CONFLICTO: '/sincronizacion/resolver-conflicto',
   },
 } as const;
-
-type ApiEndpoints = typeof apiEndpoints;
-
-export type ApiEndpointKeys = {
-  [Section in keyof ApiEndpoints]: {
-    [Action in keyof ApiEndpoints[Section]]: ApiEndpoints[Section][Action] extends (...args: any[]) => string
-      ? string
-      : ApiEndpoints[Section][Action];
-  };
-};
-
-export const apiEndpointKeys: ApiEndpointKeys = apiEndpoints;

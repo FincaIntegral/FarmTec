@@ -1,0 +1,32 @@
+<div class="space-y-4">
+  <div class="flex gap-1.5 border-b border-border">
+    <button
+      (click)="seleccionarTab('potreros')"
+      class="text-xs font-black px-4 py-2 transition-all font-heading border-b-2 -mb-px"
+      [class.border-amber-600]="tabActiva() === 'potreros'"
+      [class.text-amber-600]="tabActiva() === 'potreros'"
+      [class.dark:text-amber-400]="tabActiva() === 'potreros'"
+      [class.border-transparent]="tabActiva() !== 'potreros'"
+      [class.text-muted-foreground]="tabActiva() !== 'potreros'"
+    >
+      Potreros
+    </button>
+    <button
+      (click)="seleccionarTab('movimientos')"
+      class="text-xs font-black px-4 py-2 transition-all font-heading border-b-2 -mb-px"
+      [class.border-amber-600]="tabActiva() === 'movimientos'"
+      [class.text-amber-600]="tabActiva() === 'movimientos'"
+      [class.dark:text-amber-400]="tabActiva() === 'movimientos'"
+      [class.border-transparent]="tabActiva() !== 'movimientos'"
+      [class.text-muted-foreground]="tabActiva() !== 'movimientos'"
+    >
+      Movimientos
+    </button>
+  </div>
+
+  @if (tabActiva() === 'potreros') {
+    <app-potreros-listado />
+  } @else {
+    <app-potreros-movimiento />
+  }
+</div>

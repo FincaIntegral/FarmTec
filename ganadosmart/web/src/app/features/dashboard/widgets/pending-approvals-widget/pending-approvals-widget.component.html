@@ -1,0 +1,16 @@
+@if (cantidad() === 0) {
+  <p class="text-xs text-muted-foreground py-4 text-center">Todo al día — no hay transacciones pendientes de aprobación.</p>
+} @else {
+  <div class="flex items-center gap-3 p-3 rounded-xl bg-muted border border-border">
+    <app-badge [label]="cantidad() + ''" variant="orange" />
+    <span class="flex-1 text-xs font-bold text-foreground font-heading">
+      {{ cantidad() }} transacción{{ cantidad() !== 1 ? 'es' : '' }} esperando aprobación
+    </span>
+    <a routerLink="/ventas" class="text-[10px] font-black text-amber-600 dark:text-amber-400 hover:underline flex-shrink-0 font-heading">
+      Ver ventas →
+    </a>
+    <a routerLink="/gastos" class="text-[10px] font-black text-amber-600 dark:text-amber-400 hover:underline flex-shrink-0 font-heading">
+      Ver gastos →
+    </a>
+  </div>
+}

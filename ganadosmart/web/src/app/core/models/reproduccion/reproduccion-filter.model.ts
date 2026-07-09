@@ -1,11 +1,9 @@
-﻿import { EstadoReproduccion, TipoReproduccion } from '../domain-types';
+import { EstadoReproduccion } from '../domain-types';
 
+// Refleja los query params reales de GET /reproducciones.
 export interface ReproduccionFilterModel {
-  search?: string;
-  id?: string;
-  fincaId?: string;
-  toroId?: string;
-  vacaId?: string;
-  tipo?: TipoReproduccion;
   estado?: EstadoReproduccion;
+  vacaId?: string;
+  pagina?: number;
+  limite?: number;
 }

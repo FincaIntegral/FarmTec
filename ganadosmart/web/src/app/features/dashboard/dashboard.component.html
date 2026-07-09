@@ -1,0 +1,102 @@
+@if (cargando()) {
+  <p class="text-xs text-muted-foreground py-8 text-center">Cargando dashboard…</p>
+} @else if (error()) {
+  <p class="text-xs text-red-500 font-bold py-8 text-center">{{ error() }}</p>
+} @else if (datos(); as d) {
+  <div class="space-y-4">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-xl font-black text-foreground font-heading">Hacienda El Paraíso</h1>
+        <p class="text-xs text-muted-foreground mt-0.5">Resumen general de la finca</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <app-dot />
+          <span class="font-bold font-mono">{{ hora() }}</span>
+        </div>
+        <button
+          (click)="cargar()"
+          class="flex items-center gap-1.5 text-xs font-bold bg-card border border-border rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground hover:border-amber-400 dark:hover:border-amber-700 transition-all font-heading"
+        >
+          <svg lucideRefreshCw [size]="11"></svg>Actualizar
+        </button>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <app-kpi-card label="Total Animales" [value]="d.totalAnimales + ''" sub="hato activo" [icon]="iconAnimales" [accent]="true" />
+      <app-kpi-card label="Animales Muertos" [value]="d.animalesMuertos + ''" sub="histórico" [icon]="iconMortalidad" />
+      <app-kpi-card label="Vacas" [value]="d.vacas + ''" sub="en producción" [icon]="iconAnimales" />
+      <app-kpi-card label="Toros" [value]="d.toros + ''" sub="reproductores" [icon]="iconAnimales" />
+      <app-kpi-card label="Becerros" [value]="d.becerros + ''" sub="≤12 meses" [icon]="iconBecerros" />
+      <app-kpi-card label="Peso Promedio" [value]="pesoPromedioTexto()" [icon]="iconPeso" [accent]="true" />
+      <app-kpi-card label="Tasa Natalidad" [value]="d.tasaNatalidad + '%'" sub="últimos 12 meses" [icon]="iconNatalidad" />
+      <app-kpi-card label="Tasa Mortalidad" [value]="d.tasaMortalidad + '%'" sub="últimos 12 meses" [icon]="iconMortalidad" />
+      <app-kpi-card label="Ingresos / Mes" [value]="ingresosFormato()" [icon]="iconIngresos" [accent]="true" />
+    </div>
+
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+      <app-card class="p-4">
+        <app-section-header title="Ingresos vs Gastos" sub="mes actual" />
+        <app-financial-chart [ingresos]="d.ingresosMes" [gastos]="d.gastosMes" [balance]="d.balanceMes" />
+      </app-card>
+
+      <app-card class="p-4">
+        <app-section-header title="Distribución por Sexo" />
+        <div class="flex items-center justify-around py-2">
+          <div class="flex flex-col items-center gap-1">
+            <span class="w-3 h-3 rounded-sm bg-sky-500"></span>
+            <span class="font-black text-2xl text-foreground font-mono">{{ d.distribucionPorSexo.machos }}</span>
+            <span class="text-[10px] text-muted-foreground font-heading font-bold">Machos</span>
+          </div>
+          <div class="flex flex-col items-center gap-1">
+            <span class="w-3 h-3 rounded-sm bg-purple-500"></span>
+            <span class="font-black text-2xl text-foreground font-mono">{{ d.distribucionPorSexo.hembras }}</span>
+            <span class="text-[10px] text-muted-foreground font-heading font-bold">Hembras</span>
+          </div>
+        </div>
+        <div class="mt-2 pt-3 border-t border-border flex items-center justify-between text-[10px]">
+          <span class="text-muted-foreground font-heading font-bold">% Auto-aprobado</span>
+          <span class="text-foreground font-black font-mono">{{ d.porcentajeAutoAprobado }}%</span>
+        </div>
+        <div class="mt-1 flex items-center justify-between text-[10px]">
+          <span class="text-muted-foreground font-heading font-bold">Valor estimado del hato</span>
+          <span class="text-foreground font-black font-mono">{{ d.valorEstimadoHato }}</span>
+        </div>
+      </app-card>
+    </div>
+
+    <app-card class="p-4">
+      <app-section-header title="Pendientes de aprobación">
+        <app-badge action [label]="d.pendientesAprobacion + ''" variant="gray" />
+      </app-section-header>
+      <app-pending-approvals-widget [cantidad]="d.pendientesAprobacion" />
+    </app-card>
+
+    <app-card class="p-4">
+      <app-section-header title="Actividad reciente" />
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div class="flex flex-col items-center text-center gap-1 p-4 rounded-xl bg-muted border border-border">
+          <span class="font-black text-3xl text-amber-600 dark:text-amber-400 font-mono">{{ d.actividadReciente.pesosUltimos7Dias }}</span>
+          <span class="text-[11px] font-black text-foreground font-heading">Pesos registrados</span>
+          <span class="text-[10px] text-muted-foreground">últimos 7 días</span>
+        </div>
+        <div class="flex flex-col items-center text-center gap-1 p-4 rounded-xl bg-muted border border-border">
+          <span class="font-black text-3xl text-amber-600 dark:text-amber-400 font-mono">{{ d.actividadReciente.cambiosEstadoSalud }}</span>
+          <span class="text-[11px] font-black text-foreground font-heading">En tratamiento</span>
+          <span class="text-[10px] text-muted-foreground">actualmente</span>
+        </div>
+        <div class="flex flex-col items-center text-center gap-1 p-4 rounded-xl bg-muted border border-border">
+          <span class="font-black text-3xl text-amber-600 dark:text-amber-400 font-mono">{{ d.actividadReciente.inseminacionesRegistradas }}</span>
+          <span class="text-[11px] font-black text-foreground font-heading">Inseminaciones</span>
+          <span class="text-[10px] text-muted-foreground">últimos 7 días</span>
+        </div>
+        <div class="flex flex-col items-center text-center gap-1 p-4 rounded-xl bg-muted border border-border">
+          <span class="font-black text-3xl text-amber-600 dark:text-amber-400 font-mono">{{ d.actividadReciente.proximosAParto }}</span>
+          <span class="text-[11px] font-black text-foreground font-heading">Próximos a parto</span>
+          <span class="text-[10px] text-muted-foreground">en los próximos 30d</span>
+        </div>
+      </div>
+    </app-card>
+  </div>
+}

@@ -17,9 +17,17 @@ export class AnimalResponse extends AnimalListItemResponse {
     animal: Animal,
     pesoActual: number | null,
     historialPeso: HistorialPeso[],
+    enGestacion = false,
+    conteoReproduccion = { inseminaciones: 0, servicios: 0 },
+    potreroActualId: string | null = null,
   ): AnimalResponse {
     const response = new AnimalResponse();
-    const base = AnimalListItemResponse.build(animal, pesoActual);
+    const base = AnimalListItemResponse.build(
+      animal,
+      pesoActual,
+      enGestacion,
+      potreroActualId,
+    );
     response.id = base.id;
     response.codigo = base.codigo;
     response.categoria = base.categoria;
@@ -41,8 +49,7 @@ export class AnimalResponse extends AnimalListItemResponse {
       pesoKg: h.pesoKg,
       fecha: h.fecha,
     }));
-    // TODO: poblar cuando ReproduccionModule exista e importe en AnimalModule
-    response.conteoReproduccion = { inseminaciones: 0, servicios: 0 };
+    response.conteoReproduccion = conteoReproduccion;
 
     return response;
   }

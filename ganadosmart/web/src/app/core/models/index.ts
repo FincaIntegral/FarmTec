@@ -12,5 +12,7 @@ export * from './gasto';
 export * from './alerta';
 export * from './accion-sync';
 export * from './auth';
+export * from './pagination.model';
+export * from './reporte';
 
 

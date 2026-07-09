@@ -1,11 +1,8 @@
-﻿export interface MovimientoGanadoModel {
+export interface MovimientoGanadoModel {
   id: string;
-  fincaId: string;
+  animalId: string;
   potreroOrigenId: string;
   potreroDestinoId: string;
-  animalId: string;
   fecha: string;
-  observacion?: string;
-  registradoPor?: string;
-  createdAt: string;
+  observacion: string | null;
 }

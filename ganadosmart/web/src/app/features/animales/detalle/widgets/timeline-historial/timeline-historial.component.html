@@ -1,0 +1,18 @@
+@if (eventos().length === 0) {
+  <p class="text-xs text-muted-foreground py-4 text-center">Sin pesajes registrados todavía.</p>
+} @else {
+  <div class="space-y-0">
+    @for (ev of eventos(); track ev.fecha; let last = $last) {
+      <div class="flex items-center gap-3 py-2.5" [class.border-b]="!last" [class.border-border/40]="!last">
+        <span class="text-[10px] text-muted-foreground font-semibold flex-shrink-0 w-20 font-mono">{{ ev.fecha }}</span>
+        <div class="flex-1 min-w-0">
+          <p class="text-xs font-black text-foreground font-heading">Pesaje registrado</p>
+          <p class="text-[10px] text-muted-foreground font-mono">{{ ev.pesoKg }} kg</p>
+        </div>
+        <div class="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 border border-emerald-300 dark:border-emerald-700/40 flex items-center justify-center flex-shrink-0">
+          <svg lucideCheck [size]="10" class="text-emerald-600 dark:text-emerald-400"></svg>
+        </div>
+      </div>
+    }
+  </div>
+}

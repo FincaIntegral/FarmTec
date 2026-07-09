@@ -1,11 +1,5 @@
-﻿import { RolUsuario } from '../domain-types';
-
+// GET /usuarios solo acepta paginación (PaginacionQueryDto).
 export interface UsuarioFilterModel {
-  search?: string;
-  id?: string;
-  fincaId?: string;
-  nombre?: string;
-  correo?: string;
-  rol?: RolUsuario;
-  activo?: boolean;
+  pagina?: number;
+  limite?: number;
 }

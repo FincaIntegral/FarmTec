@@ -17,6 +17,8 @@ export class AnimalListItemResponse {
   static build(
     animal: Animal,
     pesoActual: number | null,
+    enGestacion = false,
+    potreroActualId: string | null = null,
   ): AnimalListItemResponse {
     const response = new AnimalListItemResponse();
     response.id = animal.id;
@@ -26,10 +28,8 @@ export class AnimalListItemResponse {
     response.estado = animal.estado;
     response.raza = animal.raza;
     response.pesoActual = pesoActual;
-    // TODO: poblar cuando PotreroModule exista e importe en AnimalModule
-    response.potreroActualId = null;
-    // TODO: poblar cuando ReproduccionModule exista e importe en AnimalModule
-    response.enGestacion = false;
+    response.potreroActualId = potreroActualId;
+    response.enGestacion = enGestacion;
     return response;
   }
 }

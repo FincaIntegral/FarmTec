@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, ILike, Repository } from 'typeorm';
+import { DataSource, ILike, In, Repository } from 'typeorm';
 import { CategoriaAnimal } from '../../shared/enums/categoria-animal.enum';
 import { EstadoAnimal } from '../../shared/enums/estado-animal.enum';
 import { SexoAnimal } from '../../shared/enums/sexo-animal.enum';
@@ -13,6 +13,8 @@ export interface FiltrosAnimal {
   sexo?: SexoAnimal;
   categoria?: CategoriaAnimal;
   buscar?: string;
+  // Restringe a estos ids (resuelto por el filtro potreroId en el service)
+  ids?: string[];
 }
 
 @Injectable()
@@ -57,6 +59,7 @@ export class AnimalRepository {
       ...(filtros.estado && { estado: filtros.estado }),
       ...(filtros.sexo && { sexo: filtros.sexo }),
       ...(filtros.categoria && { categoria: filtros.categoria }),
+      ...(filtros.ids && { id: In(filtros.ids) }),
     };
 
     // "buscar" cubre codigo y raza — el contrato menciona "nombre" pero
@@ -148,5 +151,16 @@ export class AnimalRepository {
         { estado: EstadoAnimal.MUERTO },
       );
     });
+  }
+
+  // Reactivar: borra el registro de mortalidad (fue un error) y el animal
+  // vuelve a 'activo'. Si el animal muere de nuevo más adelante, el
+  // UNIQUE(animal_id) de mortalidad no molesta porque ya no queda fila vieja.
+  async reactivar(id: string, fincaId: string): Promise<Animal | null> {
+    await this.dataSource.transaction(async (manager) => {
+      await manager.delete(Mortalidad, { animalId: id, fincaId });
+      await manager.update(Animal, { id, fincaId }, { estado: EstadoAnimal.ACTIVO });
+    });
+    return this.findById(id, fincaId);
   }
 }
