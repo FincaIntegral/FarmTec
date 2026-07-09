@@ -301,10 +301,16 @@ CREATE TABLE reproduccion (
   -- El becerro se crea con madre_id y padre_id heredados automáticamente
   becerro_resultante_id UUID,
 
+  -- Quién registró el evento (para el historial de actividad de la finca)
+  creado_por            UUID,
+
   created_at            TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
 
   CONSTRAINT fk_repro_finca
     FOREIGN KEY (finca_id) REFERENCES finca(id) ON DELETE RESTRICT,
+
+  CONSTRAINT fk_repro_creado
+    FOREIGN KEY (creado_por) REFERENCES usuario(id) ON DELETE SET NULL,
 
   CONSTRAINT fk_repro_toro
     FOREIGN KEY (toro_id) REFERENCES animal(id) ON DELETE RESTRICT,

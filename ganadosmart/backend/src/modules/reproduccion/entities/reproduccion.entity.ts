@@ -48,6 +48,11 @@ export class Reproduccion {
   @Column({ name: 'pajilla_raza', type: 'varchar', length: 150, nullable: true })
   pajillaRaza: string | null;
 
+  // Quién registró el evento (del JWT) — para el historial de actividad.
+  // Nullable: filas anteriores a la columna y ON DELETE SET NULL del usuario.
+  @Column({ name: 'creado_por', type: 'uuid', nullable: true })
+  creadoPor: string | null;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 }

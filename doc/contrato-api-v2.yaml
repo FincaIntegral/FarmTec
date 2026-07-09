@@ -1276,6 +1276,31 @@ paths:
               schema: { $ref: '#/components/schemas/IngresosVsGastosResponse' }
         '403': { $ref: '#/components/responses/Prohibido' }
 
+  /reportes/mortalidad:
+    get:
+      tags: [Reportes]
+      summary: >
+        Registros de mortalidad de la finca (un ítem por animal muerto) con
+        fecha, causa, categoría y código del animal — datos que viven en la
+        tabla mortalidad, no en animal. Alimenta la pantalla de Mortalidad
+        (KPIs, barras mensuales por categoría, torta de causas).
+        Disponible a todos los roles autenticados, igual que GET /animales.
+      responses:
+        '200':
+          description: Lista completa (sin paginar) de registros de mortalidad
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    animalId:  { type: string, format: uuid }
+                    codigo:    { type: string }
+                    categoria: { $ref: '#/components/schemas/CategoriaAnimal' }
+                    fecha:     { type: string, format: date }
+                    causa:     { type: string }
+
   # ──────────────────────────────────────────
   # MODULO 10 — ALERTAS
   # ──────────────────────────────────────────

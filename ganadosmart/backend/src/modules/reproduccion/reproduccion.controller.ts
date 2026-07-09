@@ -46,7 +46,7 @@ export class ReproduccionController {
     @Body() dto: CrearReproduccionDto,
     @CurrentUser() usuario: JwtPayload,
   ) {
-    return this.reproduccionService.create(dto, usuario.fincaId);
+    return this.reproduccionService.create(dto, usuario.fincaId, usuario.sub);
   }
 
   @Roles(...ROLES_CAMPO)

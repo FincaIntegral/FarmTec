@@ -16,6 +16,7 @@ import { PotreroService } from './potrero.service';
   ],
   controllers: [PotreroController],
   providers: [PotreroService, PotreroRepository],
-  exports: [PotreroRepository],
+  // PotreroService también se exporta para Sincronizacion (cola offline móvil)
+  exports: [PotreroRepository, PotreroService],
 })
 export class PotreroModule {}
