@@ -1,16 +1,19 @@
-@if (cantidad() === 0) {
-  <p class="text-xs text-muted-foreground py-4 text-center">Todo al día — no hay transacciones pendientes de aprobación.</p>
+@if (total() === 0) {
+  <div class="flex items-center justify-center p-4 rounded-xl bg-muted/50 border border-border">
+    <p class="text-xs text-muted-foreground">Todo al día — no hay pendientes</p>
+  </div>
 } @else {
-  <div class="flex items-center gap-3 p-3 rounded-xl bg-muted border border-border">
-    <app-badge [label]="cantidad() + ''" variant="orange" />
-    <span class="flex-1 text-xs font-bold text-foreground font-heading">
-      {{ cantidad() }} transacción{{ cantidad() !== 1 ? 'es' : '' }} esperando aprobación
-    </span>
-    <a routerLink="/ventas" class="text-[10px] font-black text-amber-600 dark:text-amber-400 hover:underline flex-shrink-0 font-heading">
-      Ver ventas →
+  <div class="grid grid-cols-2 gap-2">
+    <a routerLink="/ventas" class="p-3 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-all group">
+      <div class="text-xs text-amber-700 dark:text-amber-400 font-heading font-bold mb-1">Ventas</div>
+      <div class="text-lg font-black text-amber-600 dark:text-amber-400">{{ ventasCount() }}</div>
+      <div class="text-[10px] text-amber-600 dark:text-amber-400 mt-1">Ver pendientes →</div>
     </a>
-    <a routerLink="/gastos" class="text-[10px] font-black text-amber-600 dark:text-amber-400 hover:underline flex-shrink-0 font-heading">
-      Ver gastos →
+    <a routerLink="/gastos" class="p-3 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-all group">
+      <div class="text-xs text-rose-700 dark:text-rose-400 font-heading font-bold mb-1">Gastos</div>
+      <div class="text-lg font-black text-rose-600 dark:text-rose-400">{{ gastosCount() }}</div>
+      <div class="text-[10px] text-rose-600 dark:text-rose-400 mt-1">Ver pendientes →</div>
     </a>
   </div>
+  <p class="text-xs text-muted-foreground text-center mt-2">{{ total() }} transacción{{ total() !== 1 ? 'es' : '' }} en espera</p>
 }

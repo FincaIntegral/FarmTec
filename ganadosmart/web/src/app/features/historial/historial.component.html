@@ -2,9 +2,37 @@
   <div class="flex items-center justify-between">
     <div>
       <h1 class="text-xl font-black text-foreground font-heading">Historial de Actividad</h1>
-      <p class="text-xs text-muted-foreground mt-0.5">{{ totalRegistros() }} eventos registrados</p>
+      <p class="text-xs text-muted-foreground mt-0.5">{{ registrosFiltrados().length }} de {{ totalRegistros() }} eventos</p>
     </div>
   </div>
+
+  <app-card class="p-4">
+    <div class="space-y-3 mb-4">
+      <div class="flex items-center gap-2 bg-muted border border-border rounded-lg px-3 py-2">
+        <svg lucideSearch [size]="14" class="text-muted-foreground flex-shrink-0"></svg>
+        <input
+          type="text"
+          [(ngModel)]="busqueda"
+          placeholder="Buscar por descripción, usuario, animal..."
+          class="flex-1 bg-transparent text-xs text-foreground placeholder-muted-foreground focus:outline-none"
+        />
+      </div>
+      <div class="flex gap-1.5 flex-wrap">
+        @for (tipo of tiposFiltro; track tipo.valor) {
+          <button
+            (click)="filtroTipo.set(tipo.valor)"
+            class="text-xs px-3 py-1.5 rounded-lg font-bold transition-all"
+            [class.bg-amber-600]="filtroTipo() === tipo.valor"
+            [class.text-white]="filtroTipo() === tipo.valor"
+            [class.bg-muted]="filtroTipo() !== tipo.valor"
+            [class.text-muted-foreground]="filtroTipo() !== tipo.valor"
+          >
+            {{ tipo.label }}
+          </button>
+        }
+      </div>
+    </div>
+  </app-card>
 
   <app-card class="p-4">
     @if (error()) {

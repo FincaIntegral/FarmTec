@@ -1,7 +1,29 @@
 <div class="space-y-4">
-  <div>
-    <h1 class="text-xl font-black text-foreground font-heading">Mortalidad</h1>
-    <p class="text-xs text-muted-foreground mt-0.5">Análisis de muertes del hato</p>
+  <div class="flex items-end justify-between gap-3 flex-wrap">
+    <div>
+      <h1 class="text-xl font-black text-foreground font-heading">Mortalidad</h1>
+      <p class="text-xs text-muted-foreground mt-0.5">Análisis de muertes del hato</p>
+    </div>
+    <div class="flex gap-2">
+      <select
+        (change)="setAnio($any($event.target).value)"
+        class="text-xs px-2 py-1.5 rounded-lg bg-muted border border-border text-foreground font-bold"
+      >
+        <option value="todos">Todos los años</option>
+        @for (a of anios(); track a) {
+          <option [value]="a">{{ a }}</option>
+        }
+      </select>
+      <select
+        (change)="setMes($any($event.target).value)"
+        class="text-xs px-2 py-1.5 rounded-lg bg-muted border border-border text-foreground font-bold"
+      >
+        <option value="todos">Todos los meses</option>
+        @for (m of meses; track m; let i = $index) {
+          <option [value]="i + 1">{{ m }}</option>
+        }
+      </select>
+    </div>
   </div>
 
   @if (error()) {
@@ -37,27 +59,64 @@
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <!-- Barras mensuales por categoría -->
+      <!-- Barras mensuales por causa -->
       <app-card class="p-4">
-        <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center justify-between mb-3">
           <h2 class="text-xs font-black text-foreground uppercase tracking-wider font-heading">Muertes por mes</h2>
-          <div class="flex items-center gap-3">
-            <span class="flex items-center gap-1 text-[10px] text-muted-foreground font-bold">
-              <span class="w-2.5 h-2.5 rounded-sm bg-purple-700"></span>Adultos
-            </span>
-            <span class="flex items-center gap-1 text-[10px] text-muted-foreground font-bold">
-              <span class="w-2.5 h-2.5 rounded-sm bg-purple-400"></span>Becerros
-            </span>
-          </div>
         </div>
-        <div class="h-36 flex items-end gap-1">
+
+        <div class="flex gap-1.5 mb-4 pb-3 border-b border-border">
+          <button
+            (click)="setFiltroCategoria('todos')"
+            class="text-xs px-3 py-1.5 rounded-lg font-bold transition-all"
+            [class.bg-amber-600]="filtroCategoria() === 'todos'"
+            [class.text-white]="filtroCategoria() === 'todos'"
+            [class.bg-muted]="filtroCategoria() !== 'todos'"
+            [class.text-muted-foreground]="filtroCategoria() !== 'todos'"
+          >
+            Todos
+          </button>
+          <button
+            (click)="setFiltroCategoria('adultos')"
+            class="text-xs px-3 py-1.5 rounded-lg font-bold transition-all"
+            [class.bg-amber-600]="filtroCategoria() === 'adultos'"
+            [class.text-white]="filtroCategoria() === 'adultos'"
+            [class.bg-muted]="filtroCategoria() !== 'adultos'"
+            [class.text-muted-foreground]="filtroCategoria() !== 'adultos'"
+          >
+            Adultos
+          </button>
+          <button
+            (click)="setFiltroCategoria('becerros')"
+            class="text-xs px-3 py-1.5 rounded-lg font-bold transition-all"
+            [class.bg-amber-600]="filtroCategoria() === 'becerros'"
+            [class.text-white]="filtroCategoria() === 'becerros'"
+            [class.bg-muted]="filtroCategoria() !== 'becerros'"
+            [class.text-muted-foreground]="filtroCategoria() !== 'becerros'"
+          >
+            Becerros
+          </button>
+        </div>
+        <div class="h-48 flex items-end gap-3">
           @for (m of barrasMensuales(); track m.label) {
-            <div
-              class="flex-1 flex flex-col justify-end gap-px h-full"
-              [title]="m.label + ': ' + m.total + ' (' + m.adultos + ' adultos, ' + m.becerros + ' becerros)'"
-            >
-              <div class="bg-purple-400 rounded-t-sm min-h-0" [style.height.%]="m.becerrosPct"></div>
-              <div class="bg-purple-700 min-h-0" [class.rounded-t-sm]="m.becerros === 0" [style.height.%]="m.adultosPct"></div>
+            <div class="flex-1 h-full flex flex-col justify-end items-center group">
+              @if (m.total > 0) {
+                <div class="text-[9px] text-muted-foreground mb-1 text-center font-bold font-mono">{{ m.total }}</div>
+              }
+              <div class="w-full max-w-16 flex flex-col justify-end" [style.height.%]="m.heightPct">
+                @for (b of m.barras; track b.causa) {
+                  <div
+                    class="w-full flex flex-col min-h-0 border-b border-muted/20"
+                    [title]="b.causa + ': ' + b.adultos + ' adultos, ' + b.becerros + ' becerros'"
+                    [style.height.%]="m.total > 0 ? (b.total / m.total) * 100 : 0"
+                  >
+                    <div class="w-full min-h-0" [style.background]="b.color" [style.height.%]="b.adultos > 0 ? (b.adultos / b.total) * 100 : 0" [style.opacity]="0.85"></div>
+                    @if (b.becerros > 0) {
+                      <div class="w-full min-h-0" [style.background]="b.color" [style.height.%]="b.becerros > 0 ? (b.becerros / b.total) * 100 : 0" [style.opacity]="0.45"></div>
+                    }
+                  </div>
+                }
+              </div>
             </div>
           }
         </div>
@@ -65,6 +124,9 @@
           @for (m of barrasMensuales(); track m.label) {
             <span class="flex-1 text-center text-[9px] text-muted-foreground font-mono capitalize">{{ m.label }}</span>
           }
+        </div>
+        <div class="mt-2 text-[9px] text-muted-foreground space-y-0.5">
+          <p class="font-bold">Leyenda: Color = Causa | Tonalidad: Oscuro = Adultos, Claro = Becerros</p>
         </div>
       </app-card>
 
@@ -93,7 +155,7 @@
     <!-- Detalle -->
     <app-card class="p-4">
       <h2 class="text-xs font-black text-foreground uppercase tracking-wider mb-3 font-heading">Registros de mortalidad</h2>
-      @if (registros().length === 0) {
+      @if (registrosFiltrados().length === 0) {
         <p class="text-xs text-muted-foreground py-8 text-center">No hay animales muertos registrados.</p>
       } @else {
         <div class="overflow-x-auto -mx-1">
@@ -108,11 +170,13 @@
               </tr>
             </thead>
             <tbody>
-              @for (r of registros(); track r.animalId) {
+              @for (r of registrosFiltrados(); track r.animalId) {
                 <tr class="border-b border-border/40">
                   <td class="py-2.5 px-2 first:pl-0 font-mono text-muted-foreground">{{ r.fecha }}</td>
                   <td class="py-2.5 px-2 font-black text-foreground font-mono">{{ r.codigo }}</td>
-                  <td class="py-2.5 px-2 text-muted-foreground font-semibold">{{ categoriaLabel(r.categoria) }}</td>
+                  <td class="py-2.5 px-2">
+                    <app-badge [label]="categoriaLabel(r.categoria)" [variant]="categoriaVariant(r.categoria)" />
+                  </td>
                   <td class="py-2.5 px-2 text-muted-foreground capitalize">{{ r.causa }}</td>
                 </tr>
               }
