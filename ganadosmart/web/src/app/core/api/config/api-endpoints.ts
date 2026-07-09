@@ -50,6 +50,7 @@ export const apiEndpoints = {
     DASHBOARD: '/reportes/dashboard',
     INGRESOS_VS_GASTOS: '/reportes/ingresos-vs-gastos',
     MORTALIDAD: '/reportes/mortalidad',
+    ACTIVIDAD: '/reportes/actividad',
   },
   ALERTAS: {
     LIST: '/alertas',

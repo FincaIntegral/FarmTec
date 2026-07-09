@@ -1,0 +1,75 @@
+<div class="space-y-4">
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-xl font-black text-foreground font-heading">Historial de Actividad</h1>
+      <p class="text-xs text-muted-foreground mt-0.5">{{ totalRegistros() }} eventos registrados</p>
+    </div>
+  </div>
+
+  <app-card class="p-4">
+    @if (error()) {
+      <p class="text-xs text-red-500 font-bold mb-3">{{ error() }}</p>
+    }
+
+    @if (cargando()) {
+      <p class="text-xs text-muted-foreground py-8 text-center">Cargando historial…</p>
+    } @else if (registros().length === 0) {
+      <p class="text-xs text-muted-foreground py-8 text-center">No hay actividad registrada.</p>
+    } @else {
+      <div class="space-y-6">
+        @for (grupo of agrupadoPorDia(); track grupo[0]) {
+          <div>
+            <div class="flex items-center gap-2 mb-3 pb-2 border-b border-border">
+              <svg lucideCalendar [size]="14" class="text-muted-foreground"></svg>
+              <h3 class="text-xs font-bold text-foreground">{{ grupo[0] | date: 'EEEE, d MMMM' }}</h3>
+            </div>
+            <div class="space-y-2">
+              @for (evento of grupo[1]; track evento.entidadId + evento.fecha) {
+                <div class="flex gap-3 text-xs">
+                  <div class="w-2 h-2 rounded-full bg-amber-500 mt-1.5 flex-shrink-0"></div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-foreground">{{ evento.descripcion }}</p>
+                    @if (evento.usuario) {
+                      <p class="text-muted-foreground text-[10px] mt-0.5 flex items-center gap-1">
+                        <svg lucideUser [size]="10"></svg>
+                        {{ evento.usuario.nombre }} ({{ evento.usuario.rol }})
+                        · {{ evento.fecha | date: 'short' }}
+                      </p>
+                    } @else {
+                      <p class="text-muted-foreground text-[10px] mt-0.5">
+                        {{ evento.fecha | date: 'short' }}
+                      </p>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="mt-4 pt-4 border-t border-border flex items-center justify-between">
+        <span class="text-[10px] text-muted-foreground">{{ totalRegistros() }} eventos</span>
+        @if (totalPaginas() > 1) {
+          <div class="flex items-center gap-2">
+            <button
+              (click)="irAPagina(pagina() - 1)"
+              [disabled]="pagina() <= 1"
+              class="text-[10px] font-bold text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+            >
+              Anterior
+            </button>
+            <span class="text-[10px] text-muted-foreground font-mono">{{ pagina() }} / {{ totalPaginas() }}</span>
+            <button
+              (click)="irAPagina(pagina() + 1)"
+              [disabled]="pagina() >= totalPaginas()"
+              class="text-[10px] font-bold text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+            >
+              Siguiente
+            </button>
+          </div>
+        }
+      </div>
+    }
+  </app-card>
+</div>
