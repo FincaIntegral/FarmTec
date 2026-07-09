@@ -16,7 +16,7 @@ export class ThemeService {
   private loadTheme(): 'light' | 'dark' {
     const stored = localStorage.getItem(this.STORAGE_KEY) as 'light' | 'dark' | null;
     if (stored) return stored;
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    return 'light';
   }
 
   toggle(): void {

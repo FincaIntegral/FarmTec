@@ -61,7 +61,7 @@
                   {{ u.ultimoAcceso ? (u.ultimoAcceso | date: 'short') : 'Nunca' }}
                 </td>
                 <td class="py-2.5 px-2 last:pr-0 text-right relative">
-                  <div class="relative inline-block group">
+                  <div class="relative inline-block">
                     <button
                       type="button"
                       (click)="abrirMenuOpciones(u, $event)"
@@ -69,7 +69,7 @@
                     >
                       <svg lucideEllipsisVertical [size]="14"></svg>
                     </button>
-                    <div class="absolute right-0 mt-1 w-40 bg-card border border-border rounded-lg shadow-lg invisible group-hover:visible z-10 py-1">
+                    <div class="absolute right-0 mt-1 w-40 bg-card border border-border rounded-lg shadow-lg z-10 py-1">
                       <button
                         type="button"
                         (click)="abrirModalCambiarPassword(u)"

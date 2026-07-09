@@ -28,7 +28,7 @@
                 <div class="flex gap-3 text-xs">
                   <div class="w-2 h-2 rounded-full bg-amber-500 mt-1.5 flex-shrink-0"></div>
                   <div class="flex-1 min-w-0">
-                    <p class="text-foreground">{{ evento.descripcion }}</p>
+                    <p class="text-foreground">{{ formatearDescripcion(evento.descripcion) }}</p>
                     @if (evento.usuario) {
                       <p class="text-muted-foreground text-[10px] mt-0.5 flex items-center gap-1">
                         <svg lucideUser [size]="10"></svg>
