@@ -176,21 +176,17 @@ describe('ReproduccionService', () => {
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
-    it('permite toro muerto o vendido en inseminación (semen ya registrado)', async () => {
+    it('rechaza toro muerto o vendido incluso en inseminación', async () => {
       const toroVendido = { ...toro, estado: EstadoAnimal.VENDIDO } as Animal;
       repo.findAnimalById.mockImplementation((id) =>
         Promise.resolve(id === toro.id ? toroVendido : vaca),
       );
-      repo.existeEnCursoParaVaca.mockResolvedValue(false);
-      repo.create.mockImplementation((data) =>
-        Promise.resolve({ ...reproEnCurso, ...data } as Reproduccion),
-      );
-
-      const result = await service.create(
-        { ...dto, tipo: TipoReproduccion.INSEMINACION },
-        FINCA,
-      );
-      expect(result.estado).toBe(EstadoReproduccion.EN_CURSO);
+      await expect(
+        service.create(
+          { ...dto, tipo: TipoReproduccion.INSEMINACION },
+          FINCA,
+        ),
+      ).rejects.toBeInstanceOf(BadRequestException);
     });
 
     it('rechaza vaca muerta incluso en inseminación', async () => {
