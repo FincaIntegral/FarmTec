@@ -44,6 +44,8 @@ describe('ReporteService', () => {
         total_transacciones: '4',
       }),
       transacciones: jest.fn(),
+      actividad: jest.fn(),
+      mortalidades: jest.fn(),
     } as unknown as jest.Mocked<ReporteRepository>;
     service = new ReporteService(repo, ventaService, gastoService);
   });
@@ -100,5 +102,91 @@ describe('ReporteService', () => {
       { categoria: 'insumos', monto: 400000 },
     ]);
     expect(r.transacciones).toHaveLength(3); // pero sí se lista
+  });
+
+  describe('actividad', () => {
+    const query = { pagina: 1, limite: 50 };
+
+    it('mapea filas a entradas y arma la meta desde total_count', async () => {
+      repo.actividad.mockResolvedValue([
+        {
+          tipo: 'venta_creada',
+          descripcion: 'Registró una venta a Frigorífico X por 100000',
+          entidad_id: 'venta-1',
+          entidad_codigo: 'Frigorífico X',
+          usuario_id: 'user-1',
+          usuario_nombre: 'Dueño Test',
+          usuario_rol: 'dueno_finca',
+          fecha: new Date('2026-07-06T12:00:00Z'),
+          total_count: '3',
+        },
+        {
+          // animal_creado no tiene columna de usuario → usuario null
+          tipo: 'animal_creado',
+          descripcion: 'Registró el animal VACA-001',
+          entidad_id: 'animal-1',
+          entidad_codigo: 'VACA-001',
+          usuario_id: null,
+          usuario_nombre: null,
+          usuario_rol: null,
+          fecha: new Date('2026-07-05T09:00:00Z'),
+          total_count: '3',
+        },
+      ] as never);
+
+      const r = await service.actividad(FINCA, query as never);
+
+      expect(repo.actividad).toHaveBeenCalledWith(
+        FINCA,
+        expect.objectContaining({ usuarioId: undefined, tipo: undefined }),
+        1,
+        50,
+      );
+      expect(r.datos).toHaveLength(2);
+      expect(r.datos[0]).toMatchObject({
+        tipo: 'venta_creada',
+        entidadId: 'venta-1',
+        entidadCodigo: 'Frigorífico X',
+        usuario: { id: 'user-1', nombre: 'Dueño Test', rol: 'dueno_finca' },
+      });
+      // evento sin columna de usuario → usuario null (no un objeto vacío)
+      expect(r.datos[1].usuario).toBeNull();
+      // total viene de la window function, no del length de la página
+      expect(r.meta.totalRegistros).toBe(3);
+    });
+
+    it('sin actividad → total 0 y datos vacíos', async () => {
+      repo.actividad.mockResolvedValue([]);
+      const r = await service.actividad(FINCA, query as never);
+      expect(r.datos).toEqual([]);
+      expect(r.meta.totalRegistros).toBe(0);
+    });
+  });
+
+  describe('mortalidades', () => {
+    it('mapea las filas SQL (snake_case) al shape camelCase de la respuesta', async () => {
+      repo.mortalidades.mockResolvedValue([
+        {
+          animal_id: 'animal-1',
+          codigo: 'VACA-001',
+          categoria: 'vaca',
+          fecha: '2026-07-01',
+          causa: 'enfermedad',
+        },
+      ]);
+
+      const r = await service.mortalidades(FINCA);
+
+      expect(repo.mortalidades).toHaveBeenCalledWith(FINCA);
+      expect(r).toEqual([
+        {
+          animalId: 'animal-1',
+          codigo: 'VACA-001',
+          categoria: 'vaca',
+          fecha: '2026-07-01',
+          causa: 'enfermedad',
+        },
+      ]);
+    });
   });
 });

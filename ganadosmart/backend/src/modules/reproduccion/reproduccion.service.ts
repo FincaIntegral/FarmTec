@@ -53,6 +53,7 @@ export class ReproduccionService {
   async create(
     dto: CrearReproduccionDto,
     fincaId: string,
+    creadoPor?: string,
   ): Promise<ReproduccionResponse> {
     const tienePajilla = !!(dto.pajillaProveedor || dto.pajillaRaza);
 
@@ -157,6 +158,7 @@ export class ReproduccionService {
       tipo: dto.tipo,
       fecha: dto.fecha,
       fechaProbableParto: fechaProbableParto.toISOString().slice(0, 10),
+      creadoPor: creadoPor ?? null,
     });
 
     return ReproduccionResponse.build(reproduccion);

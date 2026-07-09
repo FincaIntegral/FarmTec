@@ -1,8 +1,30 @@
 import { Injectable } from '@nestjs/common';
+import {
+  PaginacionMeta,
+  PaginatedResponse,
+} from '../../shared/dto/paginacion-meta.dto';
 import { CategoriaGasto } from '../../shared/enums/categoria-gasto.enum';
 import { GastoService } from '../gasto/gasto.service';
 import { VentaService } from '../venta/venta.service';
+import { ActividadQueryDto } from './dto/actividad-query.dto';
 import { ReporteRepository } from './reporte.repository';
+
+export interface EntradaActividad {
+  tipo: string;
+  descripcion: string;
+  entidadId: string;
+  entidadCodigo: string;
+  usuario: { id: string; nombre: string; rol: string } | null;
+  fecha: Date;
+}
+
+export interface RegistroMortalidad {
+  animalId: string;
+  codigo: string;
+  categoria: string;
+  fecha: string;
+  causa: string;
+}
 
 const pct = (parte: number, total: number) =>
   total === 0 ? 0 : Math.round((parte / total) * 10000) / 100;
@@ -72,6 +94,53 @@ export class ReporteService {
         hembras: parseInt(hato.hembras, 10),
       },
     };
+  }
+
+  async actividad(
+    fincaId: string,
+    query: ActividadQueryDto,
+  ): Promise<PaginatedResponse<EntradaActividad>> {
+    const { usuarioId, tipo, fechaInicio, fechaFin, pagina, limite } = query;
+    const filas = await this.reporteRepository.actividad(
+      fincaId,
+      { usuarioId, tipo, fechaInicio, fechaFin },
+      pagina,
+      limite,
+    );
+
+    // total_count viene de la window function (igual en todas las filas);
+    // sin filas, la página está fuera de rango o no hay actividad → 0.
+    const total = filas.length > 0 ? parseInt(filas[0].total_count, 10) : 0;
+
+    return {
+      datos: filas.map((f) => ({
+        tipo: f.tipo,
+        descripcion: f.descripcion,
+        entidadId: f.entidad_id,
+        entidadCodigo: f.entidad_codigo,
+        usuario:
+          f.usuario_id === null
+            ? null
+            : {
+                id: f.usuario_id,
+                nombre: f.usuario_nombre!,
+                rol: f.usuario_rol!,
+              },
+        fecha: f.fecha,
+      })),
+      meta: PaginacionMeta.build(total, pagina, limite),
+    };
+  }
+
+  async mortalidades(fincaId: string): Promise<RegistroMortalidad[]> {
+    const filas = await this.reporteRepository.mortalidades(fincaId);
+    return filas.map((f) => ({
+      animalId: f.animal_id,
+      codigo: f.codigo,
+      categoria: f.categoria,
+      fecha: f.fecha,
+      causa: f.causa,
+    }));
   }
 
   async ingresosVsGastos(

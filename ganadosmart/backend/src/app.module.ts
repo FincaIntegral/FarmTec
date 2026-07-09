@@ -8,6 +8,7 @@ import { GastoModule } from './modules/gasto/gasto.module';
 import { PotreroModule } from './modules/potrero/potrero.module';
 import { ReporteModule } from './modules/reporte/reporte.module';
 import { ReproduccionModule } from './modules/reproduccion/reproduccion.module';
+import { SincronizacionModule } from './modules/sincronizacion/sincronizacion.module';
 import { UsuarioModule } from './modules/usuario/usuario.module';
 import { VentaModule } from './modules/venta/venta.module';
 import { HealthController } from './shared/health.controller';
@@ -36,6 +37,7 @@ import { HealthController } from './shared/health.controller';
     GastoModule,
     ReporteModule,
     AlertaModule,
+    SincronizacionModule,
   ],
   controllers: [HealthController],
 })

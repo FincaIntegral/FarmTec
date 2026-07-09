@@ -86,6 +86,22 @@ describe('ReproduccionService', () => {
       expect(result.estado).toBe(EstadoReproduccion.EN_CURSO);
     });
 
+    it('propaga creado_por (del JWT) al repositorio para el historial', async () => {
+      repo.findAnimalById.mockImplementation((id) =>
+        Promise.resolve(id === toro.id ? toro : vaca),
+      );
+      repo.existeEnCursoParaVaca.mockResolvedValue(false);
+      repo.create.mockImplementation((data) =>
+        Promise.resolve({ ...reproEnCurso, ...data } as Reproduccion),
+      );
+
+      await service.create(dto, FINCA, 'user-99');
+
+      expect(repo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ creadoPor: 'user-99' }),
+      );
+    });
+
     it('rechaza toro que no es macho de la finca', async () => {
       repo.findAnimalById.mockImplementation((id) =>
         Promise.resolve(id === toro.id ? vaca : vaca),
