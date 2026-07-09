@@ -1,13 +1,14 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { LucideCalendar, LucideUser } from '@lucide/angular';
+import { FormsModule } from '@angular/forms';
+import { LucideCalendar, LucideUser, LucideSearch } from '@lucide/angular';
 import { ReporteService, ActividadRegistroModel } from '../../core/services/reporte.service';
 import { CardComponent } from '../../shared/components/card/card.component';
 
 @Component({
   selector: 'app-historial',
   standalone: true,
-  imports: [DatePipe, CardComponent, LucideCalendar, LucideUser],
+  imports: [DatePipe, CardComponent, LucideCalendar, LucideUser, LucideSearch, FormsModule],
   templateUrl: './historial.component.html',
 })
 export class HistorialComponent {
@@ -19,6 +20,17 @@ export class HistorialComponent {
   readonly pagina = signal(1);
   readonly totalPaginas = signal(1);
   readonly totalRegistros = signal(0);
+  readonly busqueda = signal('');
+  readonly filtroTipo = signal<string | null>(null);
+
+  readonly tiposFiltro = [
+    { valor: null, label: 'Todos' },
+    { valor: 'venta', label: 'Ventas' },
+    { valor: 'gasto', label: 'Gastos' },
+    { valor: 'reproduccion', label: 'Reproducción' },
+    { valor: 'mortalidad', label: 'Mortalidad' },
+    { valor: 'peso', label: 'Pesos' },
+  ];
 
   constructor() {
     this.cargar();
@@ -49,9 +61,22 @@ export class HistorialComponent {
     this.cargar();
   }
 
-  agrupadoPorDia = computed(() => {
+  readonly registrosFiltrados = computed(() => {
+    const todos = this.registros();
+    const busca = this.busqueda().toLowerCase();
+    const tipo = this.filtroTipo();
+
+    return todos.filter((r) => {
+      const descLower = r.descripcion.toLowerCase();
+      const cumpleBusca = !busca || descLower.includes(busca) || r.usuario?.nombre.toLowerCase().includes(busca);
+      const cumpleTipo = !tipo || r.descripcion.toLowerCase().includes(tipo);
+      return cumpleBusca && cumpleTipo;
+    });
+  });
+
+  readonly agrupadoPorDia = computed(() => {
     const map = new Map<string, ActividadRegistroModel[]>();
-    for (const registro of this.registros()) {
+    for (const registro of this.registrosFiltrados()) {
       const dia = registro.fecha.split('T')[0];
       if (!map.has(dia)) {
         map.set(dia, []);
