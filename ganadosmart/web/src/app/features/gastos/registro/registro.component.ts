@@ -1,4 +1,3 @@
-import { DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { LucidePlus, LucideX } from '@lucide/angular';
@@ -6,6 +5,7 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { CategoriaGasto, EstadoAprobacion } from '../../../core/models/domain-types';
 import { GastoDetailModel } from '../../../core/models/gasto';
 import { GastoService } from '../../../core/services/gasto.service';
+import { FormatCurrencyPipe } from '../../../core/pipes/format-currency.pipe';
 import { BadgeComponent, BadgeVariant } from '../../../shared/components/badge/badge.component';
 import { CardComponent } from '../../../shared/components/card/card.component';
 
@@ -42,7 +42,7 @@ const CATEGORIAS: CategoriaGasto[] = ['insumos', 'nomina', 'veterinario', 'otro'
 @Component({
   selector: 'app-gastos-registro',
   standalone: true,
-  imports: [ReactiveFormsModule, DecimalPipe, CardComponent, BadgeComponent, LucidePlus, LucideX],
+  imports: [ReactiveFormsModule, FormatCurrencyPipe, CardComponent, BadgeComponent, LucidePlus, LucideX],
   templateUrl: './registro.component.html',
 })
 export class RegistroComponent {
