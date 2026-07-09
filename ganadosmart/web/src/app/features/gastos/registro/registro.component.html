@@ -21,7 +21,7 @@
           <div class="flex-1 h-4 bg-muted rounded overflow-hidden">
             <div class="h-full rounded transition-all" [class]="b.color" [style.width.%]="b.pct"></div>
           </div>
-          <span class="text-[10px] font-black text-foreground font-mono w-24 text-right shrink-0">$ {{ b.total | number: '1.0-0' }}</span>
+          <span class="text-[10px] font-black text-foreground font-mono w-24 text-right shrink-0">{{ b.total | formatCurrency }}</span>
         </div>
       }
     </div>

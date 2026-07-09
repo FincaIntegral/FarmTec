@@ -60,4 +60,12 @@ export class HistorialComponent {
     }
     return Array.from(map.entries()).sort((a, b) => b[0].localeCompare(a[0]));
   });
+
+  formatearDescripcion(desc: string): string {
+    return desc.replace(/\b(\d{1,3}(?:\.\d{3})*(?:,\d{2})?|\d+(?:,\d{2})?)\b/g, (match) => {
+      const num = parseFloat(match.replace(/\./g, '').replace(',', '.'));
+      if (isNaN(num) || num < 1000) return match;
+      return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(num);
+    });
+  }
 }
