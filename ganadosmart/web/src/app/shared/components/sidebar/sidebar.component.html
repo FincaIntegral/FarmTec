@@ -49,11 +49,10 @@
     }
 
     <div class="relative group">
-      <div class="w-full flex items-center gap-2.5 px-3 py-2.5 cursor-not-allowed opacity-35">
-        <svg lucideLock [size]="15" class="flex-shrink-0 text-muted-foreground"></svg>
+      <div class="w-full flex items-center gap-2.5 px-3 py-2.5 cursor-not-allowed opacity-40 text-muted-foreground">
+        <svg lucideLock [size]="15" class="flex-shrink-0"></svg>
         @if (!collapsed()) {
-          <span class="text-xs font-bold text-muted-foreground flex-1 whitespace-nowrap font-heading">Seguridad</span>
-          <svg lucideLock [size]="10" class="text-muted-foreground flex-shrink-0"></svg>
+          <span class="text-xs font-semibold flex-1 whitespace-nowrap font-heading">Seguridad</span>
         }
       </div>
       @if (!collapsed()) {
