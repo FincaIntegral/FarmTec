@@ -15,6 +15,7 @@ const PADDING = 24;
   templateUrl: './peso-history-chart.component.html',
 })
 export class PesoHistoryChartComponent {
+  readonly ALTO = ALTO;
   readonly historial = input.required<PuntoHistorial[]>();
 
   readonly viewBox = `0 0 ${ANCHO} ${ALTO}`;
@@ -22,23 +23,29 @@ export class PesoHistoryChartComponent {
 
   readonly ordenado = computed(() => [...this.historial()].sort((a, b) => a.fecha.localeCompare(b.fecha)));
 
+  readonly minMax = computed(() => {
+    const pesos = this.ordenado().map((d) => d.pesoKg);
+    const min = Math.min(...pesos);
+    const max = Math.max(...pesos);
+    const rango = max - min || 1;
+    return { min: Math.floor(min - rango * 0.1), max: Math.ceil(max + rango * 0.1), rango };
+  });
+
   readonly puntosSvg = computed(() => {
     const datos = this.ordenado();
     if (datos.length === 0) {
       return [];
     }
 
-    const pesos = datos.map((d) => d.pesoKg);
-    const min = Math.min(...pesos);
-    const max = Math.max(...pesos);
-    const rango = max - min || 1;
+    const { min, max, rango } = this.minMax();
+    const actualRango = max - min;
 
     const anchoUtil = ANCHO - PADDING * 2;
     const altoUtil = ALTO - PADDING * 2;
 
     return datos.map((d, i) => {
       const x = datos.length === 1 ? ANCHO / 2 : PADDING + (i / (datos.length - 1)) * anchoUtil;
-      const y = PADDING + altoUtil - ((d.pesoKg - min) / rango) * altoUtil;
+      const y = PADDING + altoUtil - ((d.pesoKg - min) / actualRango) * altoUtil;
       return { x, y, pesoKg: d.pesoKg, fecha: d.fecha };
     });
   });
