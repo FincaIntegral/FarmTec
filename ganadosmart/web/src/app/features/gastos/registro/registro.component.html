@@ -74,7 +74,7 @@
                 <td class="py-2.5 px-2 first:pl-0 font-mono text-muted-foreground">{{ g.fecha }}</td>
                 <td class="py-2.5 px-2 font-black text-foreground">{{ categoriaLabel(g.categoria) }}</td>
                 <td class="py-2.5 px-2 text-muted-foreground font-semibold">{{ g.descripcion || '—' }}</td>
-                <td class="py-2.5 px-2 font-black text-foreground font-mono">$ {{ g.monto | number: '1.0-0' }}</td>
+                <td class="py-2.5 px-2 font-black text-foreground font-mono">{{ g.monto | formatCurrency }}</td>
                 <td class="py-2.5 px-2">
                   <app-badge [label]="estadoLabel(g.estadoAprobacion)" [variant]="estadoVariant(g.estadoAprobacion)" />
                 </td>

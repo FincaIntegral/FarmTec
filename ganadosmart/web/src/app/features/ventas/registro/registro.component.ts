@@ -1,4 +1,3 @@
-import { DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { LucidePlus, LucideX } from '@lucide/angular';
@@ -8,6 +7,7 @@ import { EstadoAprobacion } from '../../../core/models/domain-types';
 import { VentaDetailModel } from '../../../core/models/venta';
 import { AnimalService } from '../../../core/services/animal.service';
 import { VentaService } from '../../../core/services/venta.service';
+import { FormatCurrencyPipe } from '../../../core/pipes/format-currency.pipe';
 import { BadgeComponent, BadgeVariant } from '../../../shared/components/badge/badge.component';
 import { CardComponent } from '../../../shared/components/card/card.component';
 
@@ -28,7 +28,7 @@ const ESTADO_LABEL: Record<EstadoAprobacion, string> = {
 @Component({
   selector: 'app-ventas-registro',
   standalone: true,
-  imports: [ReactiveFormsModule, DecimalPipe, CardComponent, BadgeComponent, LucidePlus, LucideX],
+  imports: [ReactiveFormsModule, FormatCurrencyPipe, CardComponent, BadgeComponent, LucidePlus, LucideX],
   templateUrl: './registro.component.html',
 })
 export class RegistroComponent {

@@ -59,7 +59,7 @@
                 <td class="py-2.5 px-2 first:pl-0 font-mono text-muted-foreground">{{ v.fecha }}</td>
                 <td class="py-2.5 px-2 font-black text-foreground font-mono">{{ codigoAnimal(v.animalId) }}</td>
                 <td class="py-2.5 px-2 text-muted-foreground font-semibold">{{ v.comprador }}</td>
-                <td class="py-2.5 px-2 font-black text-foreground font-mono">$ {{ v.monto | number: '1.0-0' }}</td>
+                <td class="py-2.5 px-2 font-black text-foreground font-mono">{{ v.monto | formatCurrency }}</td>
                 <td class="py-2.5 px-2">
                   <app-badge [label]="estadoLabel(v.estadoAprobacion)" [variant]="estadoVariant(v.estadoAprobacion)" />
                 </td>
