@@ -11,6 +11,7 @@ async function bootstrap() {
       origin: [
         'https://farm-tec.vercel.app',
         'http://localhost:4200',
+        'https://farm-2aosqaqmj-juansantamaria2005-9539s-projects.vercel.app',
       ],
       methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
       credentials: true,
