@@ -10,7 +10,7 @@ export class SupabaseStorageService {
 
   constructor(config: ConfigService) {
     this.client = createClient(
-      config.get<string>('NEXT_PUBLIC_SUPABASE_URL')!,
+      config.get<string>('SUPABASE_URL')!,
       config.get<string>('SUPABASE_SECRET_KEY')!,
     );
   }
