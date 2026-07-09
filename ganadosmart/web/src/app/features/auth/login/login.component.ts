@@ -1,19 +1,21 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { LucideBeef, LucideChevronRight, LucideEye, LucideEyeOff, LucideRefreshCw } from '@lucide/angular';
+import { LucideBeef, LucideChevronRight, LucideEye, LucideEyeOff, LucideRefreshCw, LucideMoon, LucideSun } from '@lucide/angular';
 import { AuthService } from '../../../core/auth/auth.service';
+import { ThemeService } from '../../../core/services/theme.service';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [ReactiveFormsModule, LucideBeef, LucideChevronRight, LucideEye, LucideEyeOff, LucideRefreshCw],
+  imports: [ReactiveFormsModule, LucideBeef, LucideChevronRight, LucideEye, LucideEyeOff, LucideRefreshCw, LucideMoon, LucideSun],
   templateUrl: './login.component.html',
 })
 export class LoginComponent {
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  readonly themeService = inject(ThemeService);
 
   readonly cargando = signal(false);
   readonly error = signal<string | null>(null);
