@@ -3,7 +3,7 @@ name: Deploy Backend — Fly.io
 on:
   push:
     branches:
-      - develop
+      - main
     paths:
       - 'ganadosmart/backend/**'          # Solo si cambia el backend
       - '.github/workflows/deploy-backend.yml'  # O si cambia este workflow
