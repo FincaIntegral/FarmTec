@@ -39,6 +39,7 @@ export class ReproduccionComponent {
   readonly registros = signal<ReproduccionDetailModel[]>([]);
   readonly animales = signal<AnimalSummaryModel[]>([]);
   readonly cargando = signal(true);
+  readonly cargandoAnimales = signal(true);
   readonly error = signal<string | null>(null);
   readonly filtroEstado = signal<FiltroEstado>('Todos');
   readonly pagina = signal(1);
@@ -97,11 +98,15 @@ export class ReproduccionComponent {
 
   constructor() {
     this.cargar();
-    this.animalService.listar({ limite: 100 }).subscribe((resp) => this.animales.set(resp.datos));
+    this.animalService.listar({ limite: 100 }).subscribe((resp) => {
+      this.animales.set(resp.datos);
+      this.cargandoAnimales.set(false);
+    });
   }
 
   codigoAnimal(id: string): string {
-    return this.animales().find((a) => a.id === id)?.codigo ?? id;
+    const codigo = this.animales().find((a) => a.id === id)?.codigo;
+    return codigo ?? '—';
   }
 
   origenSemenTexto(r: ReproduccionDetailModel): string {

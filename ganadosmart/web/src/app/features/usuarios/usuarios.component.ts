@@ -52,6 +52,7 @@ export class UsuariosComponent {
   readonly totalRegistros = signal(0);
 
   readonly roles = ROLES;
+  readonly usuarioMenuAbierto = signal<string | null>(null);
 
   readonly mostrarModalInvitar = signal(false);
   readonly invitando = signal(false);
@@ -152,6 +153,11 @@ export class UsuariosComponent {
 
   abrirMenuOpciones(usuario: UsuarioDetailModel, event: Event): void {
     event.stopPropagation();
+    this.usuarioMenuAbierto.set(this.usuarioMenuAbierto() === usuario.id ? null : usuario.id);
+  }
+
+  cerrarMenu(): void {
+    this.usuarioMenuAbierto.set(null);
   }
 
   abrirModalCambiarPassword(usuario: UsuarioDetailModel): void {
