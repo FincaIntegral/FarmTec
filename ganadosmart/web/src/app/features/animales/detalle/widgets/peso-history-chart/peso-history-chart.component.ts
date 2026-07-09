@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, input, signal } from '@angular/core';
 
 interface PuntoHistorial {
   pesoKg: number;
@@ -17,6 +17,7 @@ const PADDING = 24;
 export class PesoHistoryChartComponent {
   readonly ALTO = ALTO;
   readonly historial = input.required<PuntoHistorial[]>();
+  readonly puntoHovereado = signal<{ x: number; y: number; pesoKg: number; fecha: string } | null>(null);
 
   readonly viewBox = `0 0 ${ANCHO} ${ALTO}`;
   readonly lineaMediaY = ALTO / 2;
@@ -57,4 +58,23 @@ export class PesoHistoryChartComponent {
     }
     return puntos.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
   });
+
+  onMouseMove(event: MouseEvent): void {
+    const svg = event.currentTarget as SVGSVGElement;
+    const rect = svg.getBoundingClientRect();
+    const x = (event.clientX - rect.left) * (600 / rect.width);
+
+    const puntos = this.puntosSvg();
+    if (puntos.length === 0) return;
+
+    const masCercano = puntos.reduce((prev, curr) =>
+      Math.abs(curr.x - x) < Math.abs(prev.x - x) ? curr : prev
+    );
+
+    this.puntoHovereado.set(masCercano);
+  }
+
+  onMouseLeave(): void {
+    this.puntoHovereado.set(null);
+  }
 }
