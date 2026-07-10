@@ -11,4 +11,5 @@ export interface AnimalSummaryModel {
   pesoActual: number | null;
   potreroActualId: string | null;
   enGestacion: boolean;
+  createdAt: string;
 }

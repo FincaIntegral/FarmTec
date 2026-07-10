@@ -13,6 +13,7 @@ export class AnimalListItemResponse {
   pesoActual: number | null;
   potreroActualId: string | null;
   enGestacion: boolean;
+  createdAt: string;
 
   static build(
     animal: Animal,
@@ -30,6 +31,7 @@ export class AnimalListItemResponse {
     response.pesoActual = pesoActual;
     response.potreroActualId = potreroActualId;
     response.enGestacion = enGestacion;
+    response.createdAt = animal.createdAt.toISOString();
     return response;
   }
 }
