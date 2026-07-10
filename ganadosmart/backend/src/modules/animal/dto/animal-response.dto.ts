@@ -9,7 +9,6 @@ export class AnimalResponse extends AnimalListItemResponse {
   valorComercialEstimado: number | null;
   valorComercialAjustado: number | null;
   fotoUrl: string | null;
-  createdAt: Date;
   historialPeso: { pesoKg: number; fecha: string }[];
   conteoReproduccion: { inseminaciones: number; servicios: number };
 
@@ -44,7 +43,7 @@ export class AnimalResponse extends AnimalListItemResponse {
     response.valorComercialEstimado = animal.valorComercialEstimado;
     response.valorComercialAjustado = animal.valorComercialAjustado;
     response.fotoUrl = animal.fotoUrl;
-    response.createdAt = animal.createdAt;
+    response.createdAt = animal.createdAt.toISOString();
     response.historialPeso = historialPeso.map((h) => ({
       pesoKg: h.pesoKg,
       fecha: h.fecha,

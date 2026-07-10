@@ -37,8 +37,8 @@
 
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
       <app-card class="p-4">
-        <app-section-header title="Ingresos vs Gastos" sub="mes actual" />
-        <app-financial-chart [ingresos]="d.ingresosMes" [gastos]="d.gastosMes" [balance]="d.balanceMes" />
+        <app-section-header title="Ingresos vs Gastos" sub="últimos 6 meses" />
+        <app-financial-chart />
       </app-card>
 
       <app-card class="p-4">
@@ -65,6 +65,11 @@
         </div>
       </app-card>
     </div>
+
+    <app-card class="p-4">
+      <app-section-header title="Crecimiento del hato" sub="acumulado por sexo · últimos 12 meses" />
+      <app-herd-growth-chart />
+    </app-card>
 
     <app-card class="p-4">
       <app-section-header title="Pendientes de aprobación">

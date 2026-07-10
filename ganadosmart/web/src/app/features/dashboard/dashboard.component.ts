@@ -16,6 +16,7 @@ import { DotComponent } from '../../shared/components/dot/dot.component';
 import { KpiCardComponent } from '../../shared/components/kpi-card/kpi-card.component';
 import { SectionHeaderComponent } from '../../shared/components/section-header/section-header.component';
 import { FinancialChartComponent } from './widgets/financial-chart/financial-chart.component';
+import { HerdGrowthChartComponent } from './widgets/herd-growth-chart/herd-growth-chart.component';
 import { PendingApprovalsWidgetComponent } from './widgets/pending-approvals-widget/pending-approvals-widget.component';
 
 const FORMATO_MONEDA = new Intl.NumberFormat('es-CO', {
@@ -34,6 +35,7 @@ const FORMATO_MONEDA = new Intl.NumberFormat('es-CO', {
     DotComponent,
     BadgeComponent,
     FinancialChartComponent,
+    HerdGrowthChartComponent,
     PendingApprovalsWidgetComponent,
     LucideRefreshCw,
   ],
